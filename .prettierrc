@@ -1,11 +1,7 @@
 {
-	"overrides": [
-		{
-			"files": "*.sol",
-			"options": {
-				"useTabs": true,
-				"singleQuote": true
-			}
-		}
-	]
+	"arrowParens": "avoid",
+	"printWidth": 384,
+	"tabWidth": 4,
+	"singleQuote": true,
+	"useTabs": true
 }
