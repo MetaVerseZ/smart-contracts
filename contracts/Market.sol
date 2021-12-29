@@ -50,7 +50,7 @@ contract Market {
 
 		require(msg.sender != listing.owner, 'Owner cannot be buyer');
 		require(listing.status == ListingStatus.Listed, 'Listing is not active');
-		require(msg.value == listing.price, 'Insufficient payment');
+		require(msg.value >= listing.price, 'Insufficient payment');
 
 		IERC721(listing.token).transferFrom(listing.owner, msg.sender, listing.id);
 		payable(listing.owner).transfer(msg.value);
