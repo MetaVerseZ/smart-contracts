@@ -5,9 +5,8 @@ import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
 contract Market {
 	enum ListingStatus {
-		Active,
-		Sold,
-		Cancelled
+		Listed,
+		NotListed
 	}
 
 	struct Listing {
@@ -24,7 +23,6 @@ contract Market {
 
 	event Cancel(uint256 listingId, address owner);
 
-	uint256 private _listingId = 0;
 	uint256 private _listingFee = 0.001 ether;
 	uint256 private _numberOfListings;
 	uint256 private _numberOfSoldItems;
@@ -37,28 +35,26 @@ contract Market {
 		uint256 price
 	) public payable {
 		require(msg.value == _listingFee, 'Price must be equal to listing price');
-		IERC721(token).transferFrom(msg.sender, address(this), id);
+		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, token, id, price);
+		_listings[id] = listing;
+		emit Listed(id, msg.sender, token, id, price);
 
-		Listing memory listing = Listing(ListingStatus.Active, msg.sender, token, id, price);
-
-		_listings[_listingId] = listing;
-
-		emit Listed(_listingId, msg.sender, token, id, price);
-		_numberOfListings++;
-		_listingId++;
+		if (id >= _numberOfListings) {
+			_numberOfListings++;
+		}
 	}
 
 	function buyToken(uint256 listingId) external payable {
 		Listing storage listing = _listings[listingId];
 
 		require(msg.sender != listing.owner, 'Owner cannot be buyer');
-		require(listing.status == ListingStatus.Active, 'Listing is not active');
+		require(listing.status == ListingStatus.Listed, 'Listing is not active');
 		require(msg.value == listing.price, 'Insufficient payment');
 
-		IERC721(listing.token).transferFrom(address(this), msg.sender, listing.id);
+		IERC721(listing.token).transferFrom(listing.owner, msg.sender, listing.id);
 		payable(listing.owner).transfer(msg.value);
 
-		listing.status = ListingStatus.Sold;
+		listing.status = ListingStatus.NotListed;
 		listing.owner = msg.sender;
 
 		_numberOfSoldItems++;
@@ -70,11 +66,9 @@ contract Market {
 		Listing storage listing = _listings[listingId];
 
 		require(msg.sender == listing.owner, 'Only owner can cancel listing');
-		require(listing.status == ListingStatus.Active, 'Listing is not active');
+		require(listing.status == ListingStatus.Listed, 'Listing is not active');
 
-		listing.status = ListingStatus.Cancelled;
-
-		IERC721(listing.token).transferFrom(address(this), msg.sender, listing.id);
+		listing.status = ListingStatus.NotListed;
 
 		emit Cancel(listingId, listing.owner);
 	}
