@@ -33,12 +33,18 @@ describe('Transactions', async () => {
 		listingFee = await market.getListingFee();
 	});
 
-	it('mint and list item', async () => {
-		await nft.mint('http://example.com');
+	it('mint and list items', async () => {
+		await nft.mint('http://example.com/1');
 		await market.listToken(nftAddress, 0, testNftPrice, { value: listingFee.toString() });
 		const listing = await market.getListing(0);
 		expect(listing.token).to.equal(nftAddress);
 		expect(listing.status).to.equal(0);
+
+		await nft.mint('http://example.com/2');
+		await market.listToken(nftAddress, 1, testNftPrice, { value: listingFee.toString() });
+		const newListing = await market.getListing(1);
+		expect(newListing.token).to.equal(nftAddress);
+		expect(newListing.status).to.equal(0);
 	});
 
 	it('buy item', async () => {
@@ -49,11 +55,19 @@ describe('Transactions', async () => {
 	});
 
 	it('cancel item listing', async () => {
-		await nft.mint('http://example.com/2');
-		await market.listToken(nftAddress, 1, testNftPrice, { value: listingFee.toString() });
-		await market.cancel(1);
-		const listing = await market.getListing(1);
+		await nft.mint('http://example.com/3');
+		await market.listToken(nftAddress, 2, testNftPrice, { value: listingFee.toString() });
+		await market.cancel(2);
+		const listing = await market.getListing(2);
 		expect(listing.token).to.equal(nftAddress);
-		expect(listing.status).to.equal(2);
+		expect(listing.status).to.equal(1);
+	});
+
+	it('cannot list a token owned by someone else', async () => {
+		try {
+			await market.listToken(nftAddress, 1, testNftPrice, { value: listingFee.toString() });
+		} catch (error) {
+			expect(error.message.includes('Listing can be done only by owner')).to.equal(true);
+		}
 	});
 });

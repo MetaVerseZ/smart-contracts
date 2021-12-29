@@ -35,6 +35,7 @@ contract Market {
 		uint256 price
 	) public payable {
 		require(msg.value == _listingFee, 'Price must be equal to listing price');
+		require(msg.sender == IERC721(token).ownerOf(id), 'Listing can be done only by owner');
 		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, token, id, price);
 		_listings[id] = listing;
 		emit Listed(id, msg.sender, token, id, price);
