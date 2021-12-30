@@ -2,8 +2,15 @@
 pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import './Token.sol';
 
 contract Market {
+	Token public MZT;
+
+	constructor() {
+		MZT = new Token();
+	}
+
 	enum ListingStatus {
 		Listed,
 		NotListed
@@ -88,5 +95,14 @@ contract Market {
 			ret[i] = _listings[i];
 		}
 		return ret;
+	}
+
+	function giveToken(address recipient, uint256 value) public {
+		MZT.approve(recipient, value);
+		MZT.transfer(recipient, value);
+	}
+
+	function getToken() public view returns (Token) {
+		return MZT;
 	}
 }
