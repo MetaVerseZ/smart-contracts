@@ -14,9 +14,16 @@ let listingFee;
 const testNftPrice = ethers.utils.parseUnits('0.01', 'ether');
 
 describe('Deployment', () => {
+	it('deploy token contract', async () => {
+		const Token = await ethers.getContractFactory('Token');
+		token = await Token.deploy();
+		await token.deployed();
+		tokenAddress = token.address;
+	});
+
 	it('deploy market contract', async () => {
 		const Market = await ethers.getContractFactory('Market');
-		market = await Market.deploy();
+		market = await Market.deploy(tokenAddress);
 		await market.deployed();
 		marketAddress = market.address;
 	});
@@ -26,13 +33,6 @@ describe('Deployment', () => {
 		nft = await NFT.deploy(marketAddress);
 		await nft.deployed();
 		nftAddress = nft.address;
-	});
-
-	it('deploy token contract', async () => {
-		const Token = await ethers.getContractFactory('Token');
-		token = await Token.deploy();
-		await token.deployed();
-		tokenAddress = token.address;
 	});
 });
 

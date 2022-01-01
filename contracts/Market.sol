@@ -2,8 +2,15 @@
 pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
+import './Token.sol';
 
 contract Market {
+	Token _token;
+
+	constructor(address tokenAddress) {
+		_token = Token(tokenAddress);
+	}
+
 	enum ListingStatus {
 		Listed,
 		NotListed
