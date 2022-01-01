@@ -5,6 +5,7 @@ let tokenAddress = '';
 let marketAddress = '';
 let nftAddress = '';
 let buyer;
+let holder;
 let token;
 let market;
 let nft;
@@ -26,21 +27,35 @@ describe('Deployment', () => {
 		await nft.deployed();
 		nftAddress = nft.address;
 	});
+
+	it('deploy token contract', async () => {
+		const Token = await ethers.getContractFactory('Token');
+		token = await Token.deploy();
+		await token.deployed();
+		tokenAddress = token.address;
+	});
 });
 
 describe('Token', async () => {
-	before(async () => (buyer = (await ethers.getSigners())[1]));
+	before(async () => {
+		[_, buyer, holder] = await ethers.getSigners();
+	});
 
-	it('create token and add currency to market address', async () => {
-		token = (await ethers.getContractFactory('Token')).attach(await market.getToken());
-		const marketBalance = ethers.utils.formatEther(await token.balanceOf(marketAddress));
-		const tokenTotalSupply = ethers.utils.formatEther(await token.totalSupply());
+	it('token created and balance sent to holder', async () => {
+		const totalSupply = await token.totalSupply();
+		await token.approve(holder.address, totalSupply);
+		await token.transfer(holder.address, totalSupply);
+
+		const tokenTotalSupply = ethers.utils.formatEther(totalSupply);
+		const marketBalance = ethers.utils.formatEther(await token.balanceOf(holder.address));
 		expect(marketBalance).to.equal(tokenTotalSupply);
 	});
 
 	it('send some tokens to an address', async () => {
 		const amount = ethers.utils.parseUnits('20', 'ether');
-		await market.giveToken(buyer.address, amount);
+		await token.connect(holder).approve(buyer.address, amount);
+		await token.connect(holder).transfer(buyer.address, amount);
+
 		const buyerBalance = ethers.utils.formatEther(await token.balanceOf(buyer.address));
 		expect(buyerBalance).to.equal(ethers.utils.formatEther(amount));
 	});
