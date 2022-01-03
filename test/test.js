@@ -4,12 +4,14 @@ const { ethers } = require('hardhat');
 let tokenAddress = '';
 let marketAddress = '';
 let nftAddress = '';
+let main;
 let buyer;
 let holder;
 let token;
 let market;
 let nft;
 let listingFee;
+let adminAddress;
 
 const testNftPrice = ethers.utils.parseUnits('0.01', 'ether');
 
@@ -19,11 +21,13 @@ describe('Deployment', () => {
 		token = await Token.deploy();
 		await token.deployed();
 		tokenAddress = token.address;
+		console.log(token.address);
 	});
 
 	it('deploy market contract', async () => {
 		const Market = await ethers.getContractFactory('Market');
-		market = await Market.deploy(tokenAddress);
+		adminAddress = (await ethers.getSigners())[9].address;
+		market = await Market.deploy(tokenAddress, adminAddress);
 		await market.deployed();
 		marketAddress = market.address;
 	});
@@ -38,7 +42,7 @@ describe('Deployment', () => {
 
 describe('Token', async () => {
 	before(async () => {
-		[_, buyer, holder] = await ethers.getSigners();
+		[main, buyer, holder] = await ethers.getSigners();
 	});
 
 	it('token created and balance sent to holder', async () => {
@@ -56,6 +60,9 @@ describe('Token', async () => {
 		await token.connect(holder).approve(buyer.address, amount);
 		await token.connect(holder).transfer(buyer.address, amount);
 
+		await token.connect(holder).approve(main.address, amount);
+		await token.connect(holder).transfer(main.address, amount);
+
 		const buyerBalance = ethers.utils.formatEther(await token.balanceOf(buyer.address));
 		expect(buyerBalance).to.equal(ethers.utils.formatEther(amount));
 	});
@@ -69,7 +76,8 @@ describe('Transactions', async () => {
 		await Promise.all(
 			IDS.map(async id => {
 				await nft.mint(`http://example.com/${id}`);
-				await market.listToken(nftAddress, id, testNftPrice, { value: listingFee });
+				await token.approve(marketAddress, listingFee);
+				await market.listToken(nftAddress, id, testNftPrice);
 				const listing = await market.getListing(id);
 				expect(listing.token).to.equal(nftAddress);
 				expect(listing.status).to.equal(0);
@@ -80,14 +88,16 @@ describe('Transactions', async () => {
 	});
 
 	it('buy item', async () => {
-		await market.connect(buyer).buyToken(0, { value: testNftPrice });
 		const listing = await market.getListing(0);
-		expect(listing.owner).to.equal(buyer.address);
-		expect(listing.status).to.equal(1);
+		await token.connect(buyer).approve(marketAddress, listing.price);
+		await market.connect(buyer).buyToken(listing.id);
+		const updatedListing = await market.getListing(listing.id);
+		expect(updatedListing.owner).to.equal(buyer.address);
+		expect(updatedListing.status).to.equal(1);
 	});
 
 	it('list item again after buying', async () => {
-		await market.connect(buyer).listToken(nftAddress, 0, testNftPrice, { value: listingFee });
+		await market.connect(buyer).listToken(nftAddress, 0, testNftPrice);
 		const listing = await market.getListing(0);
 		expect(listing.status).to.equal(0);
 		const listings = await market.getListings();
@@ -97,7 +107,7 @@ describe('Transactions', async () => {
 	it('cancel item listing', async () => {
 		const ID = 2;
 		await nft.mint('http://example.com/3');
-		await market.listToken(nftAddress, ID, testNftPrice, { value: listingFee });
+		await market.listToken(nftAddress, ID, testNftPrice);
 		await market.cancel(ID);
 		const listing = await market.getListing(ID);
 		expect(listing.status).to.equal(1);
@@ -105,9 +115,9 @@ describe('Transactions', async () => {
 
 	it('cannot list a token owned by someone else', async () => {
 		try {
-			await market.listToken(nftAddress, 1, testNftPrice, { value: listingFee });
+			await market.listToken(nftAddress, 1, testNftPrice);
 		} catch (error) {
-			expect(error.message.includes('Listing can be done only by owner')).to.equal(true);
+			expect(error.message.includes('listing can be done only by owner')).to.equal(true);
 		}
 	});
 
@@ -115,31 +125,43 @@ describe('Transactions', async () => {
 		try {
 			await market.connect(buyer).cancel(1);
 		} catch (error) {
-			expect(error.message.includes('Only owner can cancel listing')).to.equal(true);
+			expect(error.message.includes('only owner can cancel listing')).to.equal(true);
 		}
 	});
 
 	it('cannot buy an owned item', async () => {
 		try {
-			await market.buyToken(1, { value: testNftPrice });
+			await market.buyToken(1);
 		} catch (error) {
-			expect(error.message.includes('Owner cannot be buyer')).to.equal(true);
+			expect(error.message.includes('owner cannot be buyer')).to.equal(true);
 		}
 	});
 
 	it('cannot buy an inactive item', async () => {
 		try {
-			await market.connect(buyer).buyToken(2, { value: testNftPrice });
+			await market.connect(buyer).buyToken(2);
 		} catch (error) {
-			expect(error.message.includes('Listing is not active')).to.equal(true);
+			expect(error.message.includes('listing is not active')).to.equal(true);
 		}
 	});
 
-	it('catch insufficient payment', async () => {
+	it('catch insufficient listing fee', async () => {
 		try {
-			await market.connect(buyer).buyToken(1, { value: 1 });
+			const account = (await ethers.getSigners())[3];
+			await nft.connect(account).mint(`http://example.com/4`);
+			await market.connect(account).listToken(nftAddress, 3, testNftPrice);
+			await market.connect(account).buyToken(1);
 		} catch (error) {
-			expect(error.message.includes('Insufficient payment')).to.equal(true);
+			expect(error.message.includes('balance too low for listing fee')).to.equal(true);
+		}
+	});
+
+	it('catch low balance for buy payment', async () => {
+		try {
+			const account = (await ethers.getSigners())[3];
+			await market.connect(account).buyToken(1);
+		} catch (error) {
+			expect(error.message.includes('balance too low')).to.equal(true);
 		}
 	});
 });

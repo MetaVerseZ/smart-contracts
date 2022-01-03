@@ -6,9 +6,11 @@ import './Token.sol';
 
 contract Market {
 	Token _token;
+	address _admin;
 
-	constructor(address tokenAddress) {
+	constructor(address tokenAddress, address adminAddress) {
 		_token = Token(tokenAddress);
+		_admin = adminAddress;
 	}
 
 	enum ListingStatus {
@@ -36,31 +38,41 @@ contract Market {
 
 	mapping(uint256 => Listing) private _listings;
 
+	function transfer(address to, uint256 price) private {
+		_token.transferFrom(msg.sender, address(this), price);
+		_token.approve(to, price);
+		_token.transfer(to, price);
+	}
+
 	function listToken(
-		address token,
+		address nft,
 		uint256 id,
 		uint256 price
-	) public payable {
-		require(msg.value == _listingFee, 'Price must be equal to listing price');
-		require(msg.sender == IERC721(token).ownerOf(id), 'Listing can be done only by owner');
-		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, token, id, price);
+	) public {
+		require(_token.balanceOf(msg.sender) >= _listingFee, 'balance too low for listing fee');
+		require(msg.sender == IERC721(nft).ownerOf(id), 'listing can be done only by owner');
+
+		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, nft, id, price);
 		_listings[id] = listing;
-		emit Listed(id, msg.sender, token, id, price);
+
+		transfer(_admin, _listingFee);
+
+		emit Listed(id, msg.sender, nft, id, price);
 
 		if (id >= _numberOfListings) {
 			_numberOfListings++;
 		}
 	}
 
-	function buyToken(uint256 listingId) external payable {
+	function buyToken(uint256 listingId) public {
 		Listing storage listing = _listings[listingId];
 
-		require(msg.sender != listing.owner, 'Owner cannot be buyer');
-		require(listing.status == ListingStatus.Listed, 'Listing is not active');
-		require(msg.value >= listing.price, 'Insufficient payment');
+		require(msg.sender != listing.owner, 'owner cannot be buyer');
+		require(listing.status == ListingStatus.Listed, 'listing is not active');
+
+		transfer(listing.owner, listing.price);
 
 		IERC721(listing.token).transferFrom(listing.owner, msg.sender, listing.id);
-		payable(listing.owner).transfer(msg.value);
 
 		listing.status = ListingStatus.NotListed;
 		listing.owner = msg.sender;
@@ -73,8 +85,8 @@ contract Market {
 	function cancel(uint256 listingId) public {
 		Listing storage listing = _listings[listingId];
 
-		require(msg.sender == listing.owner, 'Only owner can cancel listing');
-		require(listing.status == ListingStatus.Listed, 'Listing is not active');
+		require(msg.sender == listing.owner, 'only owner can cancel listing');
+		require(listing.status == ListingStatus.Listed, 'listing is not active');
 
 		listing.status = ListingStatus.NotListed;
 
