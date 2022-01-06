@@ -8,13 +8,11 @@ let main;
 let buyer;
 let holder;
 let token;
-let presale;
 let market;
 let nft;
 let listingFee;
 let admin;
 let adminAddress;
-let presaleAddress;
 
 const testNftPrice = ethers.utils.parseUnits('0.01', 'ether');
 
@@ -41,16 +39,9 @@ describe('Deployment', () => {
 		await nft.deployed();
 		nftAddress = nft.address;
 	});
-
-	it('deploy presale contract', async () => {
-		const Presale = await ethers.getContractFactory('Presale');
-		presale = await Presale.deploy(tokenAddress, adminAddress);
-		await presale.deployed();
-		presaleAddress = presale.address;
-	});
 });
 
-describe('Token & Presale', async () => {
+describe('Token', async () => {
 	before(async () => {
 		[main, buyer, holder] = await ethers.getSigners();
 	});
@@ -71,65 +62,11 @@ describe('Token & Presale', async () => {
 		await token.connect(holder).approve(main.address, amount);
 		await token.connect(holder).transfer(main.address, amount);
 
-		await token.connect(holder).approve(presale.address, ethers.utils.parseUnits('100000000', 'ether'));
-		await token.connect(holder).transfer(presale.address, ethers.utils.parseUnits('100000000', 'ether'));
+		await token.connect(holder).approve(buyer.address, amount);
+		await token.connect(holder).transfer(buyer.address, amount);
 
 		const mainBalance = ethers.utils.formatEther(await token.balanceOf(main.address));
 		expect(mainBalance).to.equal(ethers.utils.formatEther(amount));
-	});
-
-	it('presale withdraw some', async () => {
-		const presaleBalance = await token.balanceOf(presaleAddress);
-		await presale.connect(admin).withdraw(ethers.utils.parseEther('50'));
-		const adminBalance = await token.balanceOf(admin.address);
-
-		const updatedPresaleBalance = await token.balanceOf(presaleAddress);
-
-		expect(ethers.utils.formatEther(adminBalance)).to.equal('50.0');
-		expect(parseFloat(ethers.utils.formatEther(updatedPresaleBalance))).to.equal(parseFloat(ethers.utils.formatEther(presaleBalance)) - 50);
-	});
-
-	it('presale withdraw all', async () => {
-		await token.connect(admin).approve(presaleAddress, ethers.utils.parseEther('50'));
-		await token.connect(admin).transfer(presaleAddress, ethers.utils.parseEther('50'));
-
-		const presaleBalance = await token.balanceOf(presaleAddress);
-		await presale.connect(admin).withdrawAll();
-		const adminBalance = await token.balanceOf(admin.address);
-		const updatedPresaleBalance = await token.balanceOf(presaleAddress);
-
-		expect(ethers.utils.formatEther(adminBalance)).to.equal(ethers.utils.formatEther(presaleBalance));
-		expect(ethers.utils.formatEther(updatedPresaleBalance)).to.equal('0.0');
-	});
-
-	it('presale rounds', async () => {
-		const adminBalance = await token.balanceOf(admin.address);
-		await token.connect(admin).approve(presaleAddress, adminBalance);
-		await token.connect(admin).transfer(presaleAddress, adminBalance);
-
-		try {
-			await presale.connect(buyer).getTokens(buyer.address, { value: ethers.utils.parseEther('0.001') });
-		} catch (error) {
-			expect(error.message).to.include('presale inactive');
-		}
-
-		await presale.connect(admin).setRound('1');
-		await presale.connect(buyer).getTokens(buyer.address, { value: ethers.utils.parseEther('0.001') });
-		expect(ethers.utils.formatEther(await token.balanceOf(buyer.address))).to.equal('600.0');
-
-		await token.connect(buyer).approve(presaleAddress, ethers.utils.parseEther('600'));
-		await token.connect(buyer).transfer(presaleAddress, ethers.utils.parseEther('600'));
-
-		await presale.connect(admin).setRound('2');
-		await presale.connect(buyer).getTokens(buyer.address, { value: ethers.utils.parseEther('0.001') });
-		expect(ethers.utils.formatEther(await token.balanceOf(buyer.address))).to.equal('500.0');
-
-		await token.connect(buyer).approve(presaleAddress, ethers.utils.parseEther('500'));
-		await token.connect(buyer).transfer(presaleAddress, ethers.utils.parseEther('500'));
-
-		await presale.connect(admin).setRound('3');
-		await presale.connect(buyer).getTokens(buyer.address, { value: ethers.utils.parseEther('0.001') });
-		expect(ethers.utils.formatEther(await token.balanceOf(buyer.address))).to.equal('400.0');
 	});
 });
 
@@ -232,6 +169,7 @@ describe('Transactions', async () => {
 
 	after(() => {
 		console.log('Token address:', token.address);
-		console.log('Presale contract address:', presale.address);
+		console.log('Merket address:', market.address);
+		console.log('NFT address:', nft.address);
 	});
 });
