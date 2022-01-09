@@ -1,5 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
+const { create, urlSource } = require('ipfs-http-client');
 
 describe('Deployment', () => {
 	it('deploy token contract', async () => {
@@ -55,17 +56,31 @@ describe('Transactions', async () => {
 	before(async () => (listingFee = (await market.getListingFee()).toString()));
 
 	const testNftPrice = ethers.utils.parseUnits('500', 'ether');
+	const ipfs = create({ silent: true });
+	const gateway = 'http://ipfs.io/ipfs';
 
 	it('mint and list items', async () => {
 		const IDS = [0, 1];
 		await Promise.all(
 			IDS.map(async id => {
-				await nft.mint(`http://example.com/${id}`);
+				const metadata = {
+					id,
+					name: `item ${id}`,
+					description: 'some description',
+					image: (await ipfs.add(urlSource('https://picsum.photos/64'))).cid.toString(),
+				};
+
+				const { cid } = await ipfs.add(JSON.stringify(metadata));
+
+				await nft.mint(`${gateway}/${cid}`);
 				await token.approve(market.address, listingFee);
 				await market.listToken(nft.address, id, testNftPrice);
+
 				const listing = await market.getListing(id);
 				expect(listing.token).to.equal(nft.address);
 				expect(listing.status).to.equal(0);
+
+				expect(await nft.tokenURI(id)).to.equal(`${gateway}/${cid}`);
 			})
 		);
 		const listings = await market.getListings();

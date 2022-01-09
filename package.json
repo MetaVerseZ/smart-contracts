@@ -8,10 +8,10 @@
 		"@nomiclabs/hardhat-ethers": "^2.0.3",
 		"@nomiclabs/hardhat-waffle": "^2.0.1",
 		"@openzeppelin/contracts": "^4.4.1",
-		"axios": "^0.24.0",
 		"ethereum-waffle": "^3.4.0",
 		"ethers": "^5.5.2",
-		"hardhat": "^2.8.0"
+		"hardhat": "^2.8.0",
+		"ipfs-http-client": "^55.0.0"
 	},
 	"devDependencies": {
 		"@openzeppelin/hardhat-upgrades": "^1.12.0",
