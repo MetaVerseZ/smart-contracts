@@ -19,4 +19,23 @@ contract NFT is ERC721URIStorage {
 		_tokenId++;
 		return (_tokenId - 1);
 	}
+
+	function getAccountItems(address account) public view returns (uint256[] memory) {
+		uint256 ownedItems = 0;
+		for (uint256 i = 0; i < _tokenId; i++) {
+			if (ERC721.ownerOf(i) == account) {
+				ownedItems++;
+			}
+		}
+
+		uint256[] memory ret = new uint256[](ownedItems);
+		uint256 retIndex = 0;
+		for (uint256 i = 0; i < _tokenId; i++) {
+			if (ERC721.ownerOf(i) == account) {
+				ret[retIndex] = i;
+				retIndex++;
+			}
+		}
+		return ret;
+	}
 }

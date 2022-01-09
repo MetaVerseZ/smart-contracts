@@ -98,6 +98,15 @@ describe('Transactions', async () => {
 		expect(listing.status).to.equal(1);
 	});
 
+	it('check owned items', async () => {
+		const mainOwnedItems = (await nft.getAccountItems(main.address)).map(e => parseInt(ethers.utils.formatUnits(e, 0)));
+		const buyerOwnedItems = (await nft.getAccountItems(buyer.address)).map(e => parseInt(ethers.utils.formatUnits(e, 0)));
+		expect(mainOwnedItems.length).to.equal(2);
+		expect(buyerOwnedItems.length).to.equal(1);
+		expect(mainOwnedItems.every(item => [1, 2].includes(item)) && [1, 2].every(item => mainOwnedItems.includes(item))).to.equal(true);
+		expect(buyerOwnedItems.every(item => [0].includes(item)) && [0].every(item => buyerOwnedItems.includes(item))).to.equal(true);
+	});
+
 	it('cannot list a token owned by someone else', async () => {
 		try {
 			await market.listToken(nft.address, 1, testNftPrice);
