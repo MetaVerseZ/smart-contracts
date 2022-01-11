@@ -57,6 +57,26 @@ describe('Token', async () => {
 		expect(mainBalance).to.equal(ethers.utils.formatEther(amount));
 	});
 
+	it('cannot run airdrop with low balance', async () => {
+		const amount = ethers.utils.parseUnits('3', 'ether');
+
+		await token.connect(holder).approve(airdrop.address, amount);
+		await token.connect(holder).transfer(airdrop.address, amount);
+
+		const signers = (await ethers.getSigners()).slice(10, 15);
+
+		try {
+			await airdrop.connect(admin).distribute(signers.map(e => e.address));
+		} catch (error) {
+			expect(error.message.includes('low balance')).to.equal(true);
+		}
+
+		await airdrop.connect(admin).withdrawAll();
+
+		const balance = ethers.utils.formatEther(await token.balanceOf(airdrop.address));
+		expect(balance).to.equal(ethers.utils.formatEther(0));
+	});
+
 	it('send tokens to airdrop', async () => {
 		const amount = ethers.utils.parseUnits('200000', 'ether');
 
@@ -68,8 +88,6 @@ describe('Token', async () => {
 	});
 
 	it('airdrop', async () => {
-		const amount = ethers.utils.parseUnits('200000', 'ether');
-
 		const signers = (await ethers.getSigners()).slice(10, 15);
 
 		await airdrop.connect(admin).distribute(signers.map(e => e.address));

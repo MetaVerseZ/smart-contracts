@@ -18,7 +18,7 @@ contract MZTAirdrop {
 
 	function distribute(address[] memory _addresses) external {
 		require(msg.sender == _admin, 'not admin');
-		require(_token.balanceOf(address(this)) == 200000 ether, 'low balance');
+		require(_token.balanceOf(address(this)) >= (_addresses.length * 1 ether), 'low balance');
 
 		_value = _token.balanceOf(address(this)) / _addresses.length;
 
