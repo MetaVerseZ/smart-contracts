@@ -21,6 +21,12 @@ describe('Deployment', () => {
 		nft = await NFT.deploy(market.address);
 		await nft.deployed();
 	});
+
+	it('deploy airdrop contract', async () => {
+		const Airdrop = await ethers.getContractFactory('MZTAirdrop');
+		airdrop = await Airdrop.deploy(token.address, admin.address);
+		await airdrop.deployed();
+	});
 });
 
 describe('Token', async () => {
@@ -49,6 +55,36 @@ describe('Token', async () => {
 
 		const mainBalance = ethers.utils.formatEther(await token.balanceOf(main.address));
 		expect(mainBalance).to.equal(ethers.utils.formatEther(amount));
+	});
+
+	it('send tokens to airdrop', async () => {
+		const amount = ethers.utils.parseUnits('200000', 'ether');
+
+		await token.connect(holder).approve(airdrop.address, amount);
+		await token.connect(holder).transfer(airdrop.address, amount);
+
+		const balance = ethers.utils.formatEther(await token.balanceOf(airdrop.address));
+		expect(balance).to.equal(ethers.utils.formatEther(amount));
+	});
+
+	it('airdrop', async () => {
+		const amount = ethers.utils.parseUnits('200000', 'ether');
+
+		const signers = (await ethers.getSigners()).slice(10, 15);
+
+		await airdrop.connect(admin).distribute(signers.map(e => e.address));
+
+		const balances = await Promise.all(
+			signers.map(async e => {
+				const balance = await token.balanceOf(e.address);
+				return parseFloat(ethers.utils.formatEther(balance));
+			})
+		);
+
+		const balance = ethers.utils.formatEther(await token.balanceOf(airdrop.address));
+		expect(balance).to.equal(ethers.utils.formatEther(0));
+
+		expect(balances.every(e => e == 200000 / signers.length)).to.equal(true);
 	});
 });
 
