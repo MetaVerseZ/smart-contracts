@@ -4,13 +4,12 @@ pragma solidity ^0.8.9;
 import './Token.sol';
 
 contract MZTAirdrop {
-	Token _token;
-	address public _admin;
-	uint256 _value = 0;
+	Token _token = Token(0x5EF6b5ABaA7e9b75Fa4DaEBF0Fc722f9AFF12B40);
+	address public _admin = 0x06B0C1f32BAB7bcC00a18EB888Da11847Ed3c5F5;
+	uint256 _value;
 
-	constructor(address _tokenAddress, address _adminAddress) {
-		_token = Token(_tokenAddress);
-		_admin = _adminAddress;
+	constructor() {
+		_value = 0;
 	}
 
 	event InitAirdrop(uint256 totalAmount, uint256 number, uint256 amountEach);
