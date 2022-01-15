@@ -1,58 +1,8 @@
-const { expect } = require('chai');
 const { ethers } = require('hardhat');
+const { expect } = require('chai');
 // const { create, urlSource } = require('ipfs-http-client');
 
-describe('Deployment', () => {
-	it('deploy token contract', async () => {
-		const Token = await ethers.getContractFactory('Token');
-		token = await Token.deploy();
-		await token.deployed();
-	});
-
-	it('deploy market contract', async () => {
-		const Market = await ethers.getContractFactory('Market');
-		admin = (await ethers.getSigners())[9];
-		market = await Market.deploy(token.address, admin.address);
-		await market.deployed();
-	});
-
-	it('deploy nft contract', async () => {
-		const NFT = await ethers.getContractFactory('NFT');
-		nft = await NFT.deploy(market.address);
-		await nft.deployed();
-	});
-});
-
-describe('Token', async () => {
-	before(async () => {
-		[main, buyer, holder] = await ethers.getSigners();
-	});
-
-	it('token created and balance sent to holder', async () => {
-		const totalSupply = await token.totalSupply();
-		await token.approve(holder.address, totalSupply);
-		await token.transfer(holder.address, totalSupply);
-
-		const tokenTotalSupply = ethers.utils.formatEther(totalSupply);
-		const marketBalance = ethers.utils.formatEther(await token.balanceOf(holder.address));
-		expect(marketBalance).to.equal(tokenTotalSupply);
-	});
-
-	it('send some tokens to an address', async () => {
-		const amount = ethers.utils.parseUnits('1000000', 'ether');
-
-		await token.connect(holder).approve(main.address, amount);
-		await token.connect(holder).transfer(main.address, amount);
-
-		await token.connect(holder).approve(buyer.address, amount);
-		await token.connect(holder).transfer(buyer.address, amount);
-
-		const mainBalance = ethers.utils.formatEther(await token.balanceOf(main.address));
-		expect(mainBalance).to.equal(ethers.utils.formatEther(amount));
-	});
-});
-
-describe('Transactions', async () => {
+const test = () => {
 	before(async () => (listingFee = (await market._listingFee()).toString()));
 
 	const testNftPrice = ethers.utils.parseUnits('5000', 'ether');
@@ -183,38 +133,6 @@ describe('Transactions', async () => {
 			expect(error.message.includes('balance too low')).to.equal(true);
 		}
 	});
-});
+};
 
-describe('Withdraw', () => {
-	it('withdraw', async () => {
-		const balance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
-		await market.connect(admin).withdrawAll();
-		const newBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
-		const marketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
-		expect(newBalance > balance).to.equal(true);
-		expect(marketBalance).to.equal(parseFloat(ethers.utils.formatEther(listingFee) * (await market.numberOfListedItems())));
-	});
-
-	it('leave fees for unsold items', async () => {
-		try {
-			await market.connect(admin).withdrawAll();
-		} catch (error) {
-			expect(error.message.includes('leave fees for unsold items')).to.equal(true);
-		}
-	});
-
-	it('cannot withdraw if not admin', async () => {
-		try {
-			await market.withdrawAll();
-			expect(true).to.equal(false);
-		} catch (error) {
-			expect(error.message.includes('not admin')).to.equal(true);
-		}
-	});
-
-	after(() => {
-		console.log('Token address:', token.address);
-		console.log('Merket address:', market.address);
-		console.log('NFT address:', nft.address);
-	});
-});
+module.exports = test;
