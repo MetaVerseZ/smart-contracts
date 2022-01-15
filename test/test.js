@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { create, urlSource } = require('ipfs-http-client');
+// const { create, urlSource } = require('ipfs-http-client');
 
 describe('Deployment', () => {
 	it('deploy token contract', async () => {
@@ -20,12 +20,6 @@ describe('Deployment', () => {
 		const NFT = await ethers.getContractFactory('NFT');
 		nft = await NFT.deploy(market.address);
 		await nft.deployed();
-	});
-
-	it('deploy airdrop contract', async () => {
-		const Airdrop = await ethers.getContractFactory('MZTAirdrop');
-		airdrop = await Airdrop.deploy(token.address, admin.address);
-		await airdrop.deployed();
 	});
 });
 
@@ -62,23 +56,26 @@ describe('Transactions', async () => {
 	before(async () => (listingFee = (await market.getListingFee()).toString()));
 
 	const testNftPrice = ethers.utils.parseUnits('500', 'ether');
-	const ipfs = create({ silent: true });
-	const gateway = 'http://ipfs.io/ipfs';
+
+	// const ipfs = create({ silent: true });
+	// const gateway = 'http://ipfs.io/ipfs';
 
 	it('mint and list items', async () => {
 		const IDS = [0, 1];
 		await Promise.all(
 			IDS.map(async id => {
-				const metadata = {
-					id,
-					name: `item ${id}`,
-					description: 'some description',
-					image: (await ipfs.add(urlSource('https://picsum.photos/64'))).cid.toString(),
-				};
+				// const metadata = {
+				// 	id,
+				// 	name: `item ${id}`,
+				// 	description: 'some description',
+				// 	image: (await ipfs.add(urlSource('https://picsum.photos/64'))).cid.toString(),
+				// };
 
-				const { cid } = await ipfs.add(JSON.stringify(metadata));
+				// const { cid } = await ipfs.add(JSON.stringify(metadata));
+				// const uri = `${gateway}/${cid}`;
+				const uri = `https://www.example.com/${id}`;
 
-				await nft.mint(`${gateway}/${cid}`);
+				await nft.mint(uri);
 				await token.approve(market.address, listingFee);
 				await market.listToken(nft.address, id, testNftPrice);
 
@@ -86,7 +83,7 @@ describe('Transactions', async () => {
 				expect(listing.token).to.equal(nft.address);
 				expect(listing.status).to.equal(0);
 
-				expect(await nft.tokenURI(id)).to.equal(`${gateway}/${cid}`);
+				expect(await nft.tokenURI(id)).to.equal(uri);
 			})
 		);
 		const listings = await market.getListings();
