@@ -84,6 +84,8 @@ contract Market {
 		require(msg.sender == listing.owner, 'only owner can cancel listing');
 		require(listing.status == ListingStatus.Listed, 'listing is not active');
 
+		_token.transfer(msg.sender, _listingFee);
+
 		listing.status = ListingStatus.NotListed;
 
 		emit Cancel(listingId, listing.owner);
