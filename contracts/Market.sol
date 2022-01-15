@@ -32,17 +32,11 @@ contract Market {
 
 	event Cancel(uint256 listingId, address owner);
 
-	uint256 private _listingFee = 0.001 ether;
-	uint256 private _numberOfListings;
-	uint256 private _numberOfSoldItems;
+	uint256 public _listingFee = 1000 ether;
+	uint256 public _numberOfListings;
+	uint256 public _numberOfSoldItems;
 
-	mapping(uint256 => Listing) private _listings;
-
-	function transfer(address to, uint256 price) private {
-		_token.transferFrom(msg.sender, address(this), price);
-		_token.approve(to, price);
-		_token.transfer(to, price);
-	}
+	mapping(uint256 => Listing) public _listings;
 
 	function listToken(
 		address nft,
@@ -55,7 +49,7 @@ contract Market {
 		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, nft, id, price);
 		_listings[id] = listing;
 
-		transfer(_admin, _listingFee);
+		_token.transferFrom(msg.sender, address(this), _listingFee);
 
 		emit Listed(id, msg.sender, nft, id, price);
 
@@ -70,7 +64,9 @@ contract Market {
 		require(msg.sender != listing.owner, 'owner cannot be buyer');
 		require(listing.status == ListingStatus.Listed, 'listing is not active');
 
-		transfer(listing.owner, listing.price);
+		_token.transferFrom(msg.sender, address(this), listing.price);
+		_token.approve(listing.owner, listing.price);
+		_token.transfer(listing.owner, listing.price);
 
 		IERC721(listing.token).transferFrom(listing.owner, msg.sender, listing.id);
 
@@ -91,10 +87,6 @@ contract Market {
 		listing.status = ListingStatus.NotListed;
 
 		emit Cancel(listingId, listing.owner);
-	}
-
-	function getListingFee() public view returns (uint256) {
-		return _listingFee;
 	}
 
 	function getListing(uint256 listingId) public view returns (Listing memory) {
