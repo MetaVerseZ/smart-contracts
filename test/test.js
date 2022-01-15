@@ -39,7 +39,7 @@ describe('Token', async () => {
 	});
 
 	it('send some tokens to an address', async () => {
-		const amount = ethers.utils.parseUnits('5000', 'ether');
+		const amount = ethers.utils.parseUnits('1000000', 'ether');
 
 		await token.connect(holder).approve(main.address, amount);
 		await token.connect(holder).transfer(main.address, amount);
@@ -53,9 +53,9 @@ describe('Token', async () => {
 });
 
 describe('Transactions', async () => {
-	before(async () => (listingFee = (await market.getListingFee()).toString()));
+	before(async () => (listingFee = (await market._listingFee()).toString()));
 
-	const testNftPrice = ethers.utils.parseUnits('500', 'ether');
+	const testNftPrice = ethers.utils.parseUnits('5000', 'ether');
 
 	// const ipfs = create({ silent: true });
 	// const gateway = 'http://ipfs.io/ipfs';
@@ -86,7 +86,7 @@ describe('Transactions', async () => {
 				expect(await nft.tokenURI(id)).to.equal(uri);
 			})
 		);
-		const listings = await market.getListings();
+		const listings = await market.getAllListings();
 		expect(listings.length).to.equal(IDS.length);
 	});
 
@@ -103,17 +103,24 @@ describe('Transactions', async () => {
 		await market.connect(buyer).listToken(nft.address, 0, testNftPrice);
 		const listing = await market.getListing(0);
 		expect(listing.status).to.equal(0);
-		const listings = await market.getListings();
+		const listings = await market.getAllListings();
 		expect(listings.length).to.equal(2);
 	});
 
 	it('cancel item listing', async () => {
+		const initialBalance = await token.balanceOf(main.address);
+
 		const ID = 2;
 		await nft.mint('http://example.com/3');
 		await market.listToken(nft.address, ID, testNftPrice);
+
+		expect(parseFloat(ethers.utils.formatEther(await token.balanceOf(main.address))), parseFloat(ethers.utils.formatEther(initialBalance) + ethers.utils.formatEther(listingFee)));
+
 		await market.cancel(ID);
 		const listing = await market.getListing(ID);
 		expect(listing.status).to.equal(1);
+
+		expect(parseFloat(ethers.utils.formatEther(await token.balanceOf(main.address))), parseFloat(ethers.utils.formatEther(initialBalance)));
 	});
 
 	it('check owned items', async () => {
@@ -174,6 +181,34 @@ describe('Transactions', async () => {
 			await market.connect(account).buyToken(1);
 		} catch (error) {
 			expect(error.message.includes('balance too low')).to.equal(true);
+		}
+	});
+});
+
+describe('Withdraw', () => {
+	it('withdraw', async () => {
+		const balance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
+		await market.connect(admin).withdrawAll();
+		const newBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
+		const marketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
+		expect(newBalance > balance).to.equal(true);
+		expect(marketBalance).to.equal(parseFloat(ethers.utils.formatEther(listingFee) * (await market.numberOfListedItems())));
+	});
+
+	it('leave fees for unsold items', async () => {
+		try {
+			await market.connect(admin).withdrawAll();
+		} catch (error) {
+			expect(error.message.includes('leave fees for unsold items')).to.equal(true);
+		}
+	});
+
+	it('cannot withdraw if not admin', async () => {
+		try {
+			await market.withdrawAll();
+			expect(true).to.equal(false);
+		} catch (error) {
+			expect(error.message.includes('not admin')).to.equal(true);
 		}
 	});
 

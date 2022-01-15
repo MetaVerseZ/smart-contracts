@@ -95,11 +95,37 @@ contract Market {
 		return _listings[listingId];
 	}
 
-	function getListings() public view returns (Listing[] memory) {
+	function getAllListings() public view returns (Listing[] memory) {
 		Listing[] memory ret = new Listing[](_numberOfListings);
 		for (uint256 i = 0; i < _numberOfListings; i++) {
 			ret[i] = _listings[i];
 		}
 		return ret;
+	}
+
+	function numberOfListedItems() public view returns (uint256) {
+		Listing[] memory l = getAllListings();
+		uint256 num = 0;
+		for (uint256 i = 0; i < _numberOfListings; i++) {
+			if (l[i].status == ListingStatus.Listed) {
+				num++;
+			}
+		}
+		return num;
+	}
+
+	function withdrawAll() public {
+		require(msg.sender == _admin, 'not admin');
+		require(_token.balanceOf(address(this)) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
+		_token.approve(_admin, _token.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
+		_token.transfer(_admin, _token.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
+	}
+
+	function withdraw(uint256 amount) public {
+		require(msg.sender == _admin, 'not admin');
+		require((_token.balanceOf(address(this)) - amount) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
+		require(amount <= _token.balanceOf(address(this)), 'amount is larger than token balance');
+		_token.approve(_admin, amount);
+		_token.transfer(_admin, amount);
 	}
 }
