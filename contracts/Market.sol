@@ -33,7 +33,7 @@ contract Market {
 	event Cancel(uint256 listingId, address owner);
 
 	uint256 public _listingFee = 1000 ether;
-	uint256 public _numberOfListings;
+	uint256 public _totalNumberOfListings;
 	uint256 public _numberOfSoldItems;
 
 	mapping(uint256 => Listing) public _listings;
@@ -53,8 +53,8 @@ contract Market {
 
 		emit Listed(id, msg.sender, nft, id, price);
 
-		if (id >= _numberOfListings) {
-			_numberOfListings++;
+		if (id >= _totalNumberOfListings) {
+			_totalNumberOfListings++;
 		}
 	}
 
@@ -96,9 +96,41 @@ contract Market {
 	}
 
 	function getAllListings() public view returns (Listing[] memory) {
-		Listing[] memory ret = new Listing[](_numberOfListings);
-		for (uint256 i = 0; i < _numberOfListings; i++) {
+		Listing[] memory ret = new Listing[](_totalNumberOfListings);
+		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
 			ret[i] = _listings[i];
+		}
+		return ret;
+	}
+
+	function getListedItems() public view returns (Listing[] memory) {
+		Listing[] memory l = getAllListings();
+		uint256 n = numberOfListedItems();
+
+		Listing[] memory ret = new Listing[](n);
+		uint256 current = 0;
+
+		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
+			if (l[i].status == ListingStatus.Listed) {
+				ret[current] = l[i];
+				current++;
+			}
+		}
+		return ret;
+	}
+
+	function getUnlistedItems() public view returns (Listing[] memory) {
+		Listing[] memory l = getAllListings();
+		uint256 n = _totalNumberOfListings - numberOfListedItems();
+
+		Listing[] memory ret = new Listing[](n);
+		uint256 current = 0;
+
+		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
+			if (l[i].status == ListingStatus.NotListed) {
+				ret[current] = l[i];
+				current++;
+			}
 		}
 		return ret;
 	}
@@ -106,7 +138,7 @@ contract Market {
 	function numberOfListedItems() public view returns (uint256) {
 		Listing[] memory l = getAllListings();
 		uint256 num = 0;
-		for (uint256 i = 0; i < _numberOfListings; i++) {
+		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
 			if (l[i].status == ListingStatus.Listed) {
 				num++;
 			}
