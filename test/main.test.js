@@ -3,6 +3,8 @@ describe('Main Tests', () => {
 
 	describe('Token', require('./partials/token.test'));
 
+	describe('Mint', require('./partials/mint.test')());
+
 	describe('Transactions', require('./partials/transactions.test'));
 
 	describe('Withdraw', require('./partials/withdraw.test'));

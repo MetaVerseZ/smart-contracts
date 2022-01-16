@@ -1,44 +1,9 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-// const { create, urlSource } = require('ipfs-http-client');
 
 const test = () => {
 	before(async () => (listingFee = (await market._listingFee()).toString()));
-
 	const testNftPrice = ethers.utils.parseUnits('5000', 'ether');
-
-	// const ipfs = create({ silent: true });
-	// const gateway = 'http://ipfs.io/ipfs';
-
-	it('mint and list items', async () => {
-		const IDS = [0, 1];
-		await Promise.all(
-			IDS.map(async id => {
-				// const metadata = {
-				// 	id,
-				// 	name: `item ${id}`,
-				// 	description: 'some description',
-				// 	image: (await ipfs.add(urlSource('https://picsum.photos/64'))).cid.toString(),
-				// };
-
-				// const { cid } = await ipfs.add(JSON.stringify(metadata));
-				// const uri = `${gateway}/${cid}`;
-				const uri = `https://www.example.com/${id}`;
-
-				await nft.mint(uri);
-				await token.approve(market.address, listingFee);
-				await market.listToken(nft.address, id, testNftPrice);
-
-				const listing = await market.getListing(id);
-				expect(listing.token).to.equal(nft.address);
-				expect(listing.status).to.equal(0);
-
-				expect(await nft.tokenURI(id)).to.equal(uri);
-			})
-		);
-		const listings = await market.getAllListings();
-		expect(listings.length).to.equal(IDS.length);
-	});
 
 	it('buy item', async () => {
 		const listing = await market.getListing(0);
