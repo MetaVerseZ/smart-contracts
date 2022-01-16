@@ -3,24 +3,31 @@ pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
 
-contract NFT is ERC721URIStorage {
-	address marketAddress;
+contract Item is ERC721URIStorage {
+	address public market = address(0);
+	address public admin;
 
-	constructor(address _marketAddress) ERC721('NFT', 'NFT') {
-		marketAddress = _marketAddress;
+	constructor(address _adminAddress) ERC721('Meta Z Item', 'MZI') {
+		admin = _adminAddress;
 	}
 
 	uint256 public _tokenId = 0;
 
-	function mint(string memory _tokenURI) external returns (uint256) {
+	function setMarket(address _marketAddress) public {
+		require(msg.sender == admin, 'not admin');
+		market = _marketAddress;
+	}
+
+	function mint(string memory _tokenURI) public {
+		require(market != address(0), 'zero address');
 		_mint(msg.sender, _tokenId);
 		_setTokenURI(_tokenId, _tokenURI);
-		setApprovalForAll(marketAddress, true);
+		setApprovalForAll(market, true);
 		_tokenId++;
-		return (_tokenId - 1);
 	}
 
 	function getAccountItems(address account) public view returns (uint256[] memory) {
+		require(market != address(0));
 		uint256 ownedItems = 0;
 		for (uint256 i = 0; i < _tokenId; i++) {
 			if (ERC721.ownerOf(i) == account) {

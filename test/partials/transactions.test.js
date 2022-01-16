@@ -3,7 +3,7 @@ const { expect } = require('chai');
 
 const test = () => {
 	before(async () => (listingFee = (await market._listingFee()).toString()));
-	const testNftPrice = ethers.utils.parseUnits('5000', 'ether');
+	const testItemPrice = ethers.utils.parseUnits('5000', 'ether');
 
 	it('buy item', async () => {
 		const listing = await market.getListing(0);
@@ -15,7 +15,7 @@ const test = () => {
 	});
 
 	it('list item again after buying', async () => {
-		await market.connect(buyer).listToken(nft.address, 0, testNftPrice);
+		await market.connect(buyer).listToken(0, testItemPrice);
 		const listing = await market.getListing(0);
 		expect(listing.status).to.equal(0);
 		const listings = await market.getAllListings();
@@ -26,8 +26,8 @@ const test = () => {
 		const initialBalance = await token.balanceOf(main.address);
 
 		const ID = 2;
-		await nft.mint('http://example.com/3');
-		await market.listToken(nft.address, ID, testNftPrice);
+		await item.mint('http://example.com/3');
+		await market.listToken(ID, testItemPrice);
 
 		expect(parseFloat(ethers.utils.formatEther(await token.balanceOf(main.address))), parseFloat(ethers.utils.formatEther(initialBalance) + ethers.utils.formatEther(listingFee)));
 
@@ -39,8 +39,8 @@ const test = () => {
 	});
 
 	it('check owned items', async () => {
-		const mainOwnedItems = (await nft.getAccountItems(main.address)).map(e => parseInt(ethers.utils.formatUnits(e, 0)));
-		const buyerOwnedItems = (await nft.getAccountItems(buyer.address)).map(e => parseInt(ethers.utils.formatUnits(e, 0)));
+		const mainOwnedItems = (await item.getAccountItems(main.address)).map(e => parseInt(ethers.utils.formatUnits(e, 0)));
+		const buyerOwnedItems = (await item.getAccountItems(buyer.address)).map(e => parseInt(ethers.utils.formatUnits(e, 0)));
 		expect(mainOwnedItems.length).to.equal(2);
 		expect(buyerOwnedItems.length).to.equal(1);
 		expect(mainOwnedItems.every(item => [1, 2].includes(item)) && [1, 2].every(item => mainOwnedItems.includes(item))).to.equal(true);
@@ -49,7 +49,7 @@ const test = () => {
 
 	it('cannot list a token owned by someone else', async () => {
 		try {
-			await market.listToken(nft.address, 1, testNftPrice);
+			await market.listToken(1, testItemPrice);
 		} catch (error) {
 			expect(error.message.includes('listing can be done only by owner')).to.equal(true);
 		}
@@ -82,8 +82,8 @@ const test = () => {
 	it('catch insufficient listing fee', async () => {
 		try {
 			const account = (await ethers.getSigners())[3];
-			await nft.connect(account).mint(`http://example.com/4`);
-			await market.connect(account).listToken(nft.address, 3, testNftPrice);
+			await item.connect(account).mint(`http://example.com/4`);
+			await market.connect(account).listToken(3, testItemPrice);
 			await market.connect(account).buyToken(1);
 		} catch (error) {
 			expect(error.message.includes('balance too low for listing fee')).to.equal(true);

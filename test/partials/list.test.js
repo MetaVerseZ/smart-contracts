@@ -34,7 +34,7 @@ const test = () => {
 
 		await Promise.all(
 			listings.map(async id => {
-				await market.listToken(nft.address, id, ethers.utils.parseEther('100'));
+				await market.listToken(id, ethers.utils.parseEther('100'));
 				const listing = await market.getListing(id);
 				expect(listing.status).to.equal(0);
 			})

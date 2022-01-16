@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import './Token.sol';
+import './Item.sol';
 
 contract Market {
-	Token _token;
-	address _admin;
+	Token public _mzt;
+	Item public _item;
+	address public _admin;
 
-	constructor(address tokenAddress, address adminAddress) {
-		_token = Token(tokenAddress);
+	constructor(address mztAddress, address itemAddress, address adminAddress) {
+		_mzt = Token(mztAddress);
+		_item = Item(itemAddress);
 		_admin = adminAddress;
 	}
 
@@ -21,16 +23,13 @@ contract Market {
 	struct Listing {
 		ListingStatus status;
 		address owner;
-		address token;
 		uint256 id;
 		uint256 price;
 	}
 
-	event Listed(uint256 listingId, address owner, address token, uint256 id, uint256 price);
-
-	event Sale(uint256 listingId, address buyer, address token, uint256 id, uint256 price);
-
-	event Cancel(uint256 listingId, address owner);
+	event Listed(uint256 listingId, address owner, uint256 id, uint256 price);
+	event Unlisted(uint256 listingId, address owner);
+	event Sold(uint256 listingId, address buyer, uint256 id, uint256 price);
 
 	uint256 public _listingFee = 1000 ether;
 	uint256 public _totalNumberOfListings;
@@ -38,20 +37,16 @@ contract Market {
 
 	mapping(uint256 => Listing) public _listings;
 
-	function listToken(
-		address nft,
-		uint256 id,
-		uint256 price
-	) public {
-		require(_token.balanceOf(msg.sender) >= _listingFee, 'balance too low for listing fee');
-		require(msg.sender == IERC721(nft).ownerOf(id), 'listing can be done only by owner');
+	function listToken(uint256 id, uint256 price) public {
+		require(_mzt.balanceOf(msg.sender) >= _listingFee, 'balance too low for listing fee');
+		require(msg.sender == _item.ownerOf(id), 'listing can be done only by owner');
 
-		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, nft, id, price);
+		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, id, price);
 		_listings[id] = listing;
 
-		_token.transferFrom(msg.sender, address(this), _listingFee);
+		_mzt.transferFrom(msg.sender, address(this), _listingFee);
 
-		emit Listed(id, msg.sender, nft, id, price);
+		emit Listed(id, msg.sender, id, price);
 
 		if (id >= _totalNumberOfListings) {
 			_totalNumberOfListings++;
@@ -64,18 +59,18 @@ contract Market {
 		require(msg.sender != listing.owner, 'owner cannot be buyer');
 		require(listing.status == ListingStatus.Listed, 'listing is not active');
 
-		_token.transferFrom(msg.sender, address(this), listing.price);
-		_token.approve(listing.owner, listing.price);
-		_token.transfer(listing.owner, listing.price);
+		_mzt.transferFrom(msg.sender, address(this), listing.price);
+		_mzt.approve(listing.owner, listing.price);
+		_mzt.transfer(listing.owner, listing.price);
 
-		IERC721(listing.token).transferFrom(listing.owner, msg.sender, listing.id);
+		_item.transferFrom(listing.owner, msg.sender, listing.id);
 
 		listing.status = ListingStatus.NotListed;
 		listing.owner = msg.sender;
 
 		_numberOfSoldItems++;
 
-		emit Sale(listingId, msg.sender, listing.token, listing.id, listing.price);
+		emit Sold(listingId, msg.sender, listing.id, listing.price);
 	}
 
 	function cancel(uint256 listingId) public {
@@ -84,11 +79,11 @@ contract Market {
 		require(msg.sender == listing.owner, 'only owner can cancel listing');
 		require(listing.status == ListingStatus.Listed, 'listing is not active');
 
-		_token.transfer(msg.sender, _listingFee);
+		_mzt.transfer(msg.sender, _listingFee);
 
 		listing.status = ListingStatus.NotListed;
 
-		emit Cancel(listingId, listing.owner);
+		emit Unlisted(listingId, listing.owner);
 	}
 
 	function getListing(uint256 listingId) public view returns (Listing memory) {
@@ -148,16 +143,16 @@ contract Market {
 
 	function withdrawAll() public {
 		require(msg.sender == _admin, 'not admin');
-		require(_token.balanceOf(address(this)) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
-		_token.approve(_admin, _token.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
-		_token.transfer(_admin, _token.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
+		require(_mzt.balanceOf(address(this)) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
+		_mzt.approve(_admin, _mzt.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
+		_mzt.transfer(_admin, _mzt.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
 	}
 
 	function withdraw(uint256 amount) public {
 		require(msg.sender == _admin, 'not admin');
-		require((_token.balanceOf(address(this)) - amount) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
-		require(amount <= _token.balanceOf(address(this)), 'amount is larger than token balance');
-		_token.approve(_admin, amount);
-		_token.transfer(_admin, amount);
+		require((_mzt.balanceOf(address(this)) - amount) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
+		require(amount <= _mzt.balanceOf(address(this)), 'amount is larger than token balance');
+		_mzt.approve(_admin, amount);
+		_mzt.transfer(_admin, amount);
 	}
 }

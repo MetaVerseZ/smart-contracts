@@ -7,17 +7,18 @@ const test = () => {
 		await token.deployed();
 	});
 
-	it('deploy market contract', async () => {
-		const Market = await ethers.getContractFactory('Market');
+	it('deploy item contract', async () => {
+		const Item = await ethers.getContractFactory('Item');
 		admin = (await ethers.getSigners())[9];
-		market = await Market.deploy(token.address, admin.address);
-		await market.deployed();
+		item = await Item.deploy(admin.address);
+		await item.deployed();
 	});
 
-	it('deploy nft contract', async () => {
-		const NFT = await ethers.getContractFactory('NFT');
-		nft = await NFT.deploy(market.address);
-		await nft.deployed();
+	it('deploy market contract', async () => {
+		const Market = await ethers.getContractFactory('Market');
+		market = await Market.deploy(token.address, item.address, admin.address);
+		await market.deployed();
+		await item.connect(admin).setMarket(market.address);
 	});
 };
 

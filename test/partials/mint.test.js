@@ -7,7 +7,7 @@ const test = length => {
 
 	return () => {
 		before(async () => (listingFee = (await market._listingFee()).toString()));
-		const testNftPrice = ethers.utils.parseUnits('5000', 'ether');
+		const testItemPrice = ethers.utils.parseUnits('5000', 'ether');
 
 		// const ipfs = create({ silent: true });
 		// const gateway = 'http://ipfs.io/ipfs';
@@ -26,15 +26,14 @@ const test = length => {
 					// const uri = `${gateway}/${cid}`;
 					const uri = `https://www.example.com/${id}`;
 
-					await nft.mint(uri);
+					await item.mint(uri);
 					await token.approve(market.address, listingFee);
-					await market.listToken(nft.address, id, testNftPrice);
+					await market.listToken(id, testItemPrice);
 
 					const listing = await market.getListing(id);
-					expect(listing.token).to.equal(nft.address);
 					expect(listing.status).to.equal(0);
 
-					expect(await nft.tokenURI(id)).to.equal(uri);
+					expect(await item.tokenURI(id)).to.equal(uri);
 				})
 			);
 			const listings = await market.getAllListings();

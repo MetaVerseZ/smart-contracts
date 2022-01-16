@@ -9,7 +9,7 @@ describe('Listing Tests', () => {
 
 	after(() => {
 		console.log('\n\tToken address:', token.address);
-		console.log('\tMerket address:', market.address);
-		console.log('\tNFT address:', nft.address);
+		console.log('\tMarket address:', market.address);
+		console.log('\tItem address:', item.address);
 	});
 });
