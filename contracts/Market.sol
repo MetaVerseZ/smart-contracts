@@ -38,7 +38,7 @@ contract Market {
 	event Sold(uint256 listingId, address buyer, uint256 id, uint256 price);
 
 	uint256 public _totalNumberOfListings;
-	uint256 public _numberOfSoldItems;
+	uint256 public _numberOfSales;
 
 	mapping(uint256 => Listing) public _listings;
 
@@ -73,7 +73,7 @@ contract Market {
 		listing.status = ListingStatus.NotListed;
 		listing.owner = msg.sender;
 
-		_numberOfSoldItems++;
+		_numberOfSales++;
 
 		emit Sold(listingId, msg.sender, listing.id, listing.price);
 	}
