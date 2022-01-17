@@ -8,11 +8,17 @@ contract Market {
 	Token public _mzt;
 	Item public _item;
 	address public _admin;
+	uint256 public _listingFee;
 
-	constructor(address mztAddress, address itemAddress, address adminAddress) {
+	constructor(
+		address mztAddress,
+		address itemAddress,
+		address adminAddress
+	) {
 		_mzt = Token(mztAddress);
 		_item = Item(itemAddress);
 		_admin = adminAddress;
+		_listingFee = 1000 ether;
 	}
 
 	enum ListingStatus {
@@ -31,7 +37,6 @@ contract Market {
 	event Unlisted(uint256 listingId, address owner);
 	event Sold(uint256 listingId, address buyer, uint256 id, uint256 price);
 
-	uint256 public _listingFee = 1000 ether;
 	uint256 public _totalNumberOfListings;
 	uint256 public _numberOfSoldItems;
 
@@ -154,5 +159,10 @@ contract Market {
 		require(amount <= _mzt.balanceOf(address(this)), 'amount is larger than token balance');
 		_mzt.approve(_admin, amount);
 		_mzt.transfer(_admin, amount);
+	}
+
+	function setListingFee(uint256 amount) public {
+		require(msg.sender == _admin, 'not admin');
+		_listingFee = amount;
 	}
 }
