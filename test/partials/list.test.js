@@ -34,7 +34,7 @@ const test = () => {
 
 		await Promise.all(
 			listings.map(async id => {
-				await market.listToken(id, ethers.utils.parseEther('100'));
+				await market.listItem(id, ethers.utils.parseEther('100'));
 				const listing = await market.getListing(id);
 				expect(listing.status).to.equal(0);
 			})
@@ -58,26 +58,12 @@ const test = () => {
 			listings.map(async listing => {
 				listing = await market.getListing(listing);
 				await token.connect(buyer).approve(market.address, listing.price);
-				await market.connect(buyer).buyToken(listing.id);
+				await market.connect(buyer).buyItem(listing.id);
 			})
 		);
 
-		expect(parseInt(ethers.utils.formatUnits(await market._numberOfSoldItems(), 0))).to.equal(listings.length);
+		expect(parseInt(ethers.utils.formatUnits(await market._numberOfSales(), 0))).to.equal(listings.length);
 	});
-
-	// it('listed and unlisted items', async () => {
-	// 	const listings = Array.from({ length: 3 }, (v, k) => k);
-
-	// 	await Promise.all(
-	// 		listings.map(async listing => {
-	// 			listing = await market.getListing(listing);
-	// 			await token.connect(buyer).approve(market.address, listing.price);
-	// 			await market.connect(buyer).buyToken(listing.id);
-	// 		})
-	// 	);
-
-	// 	expect(parseInt(ethers.utils.formatUnits(await market._numberOfSoldItems(), 0))).to.equal(listings.length);
-	// });
 };
 
 module.exports = test;

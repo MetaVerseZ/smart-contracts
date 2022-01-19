@@ -42,9 +42,10 @@ contract Market {
 
 	mapping(uint256 => Listing) public _listings;
 
-	function listToken(uint256 id, uint256 price) public {
+	function listItem(uint256 id, uint256 price) public {
 		require(_mzt.balanceOf(msg.sender) >= _listingFee, 'balance too low for listing fee');
 		require(msg.sender == _item.ownerOf(id), 'listing can be done only by owner');
+		// require(_listings[id].status != ListingStatus.Listed, 'item already listed');
 
 		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, id, price);
 		_listings[id] = listing;
@@ -58,7 +59,7 @@ contract Market {
 		}
 	}
 
-	function buyToken(uint256 listingId) public {
+	function buyItem(uint256 listingId) public {
 		Listing storage listing = _listings[listingId];
 
 		require(msg.sender != listing.owner, 'owner cannot be buyer');
