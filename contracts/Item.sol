@@ -36,24 +36,4 @@ contract Item is ERC721URIStorage {
 		require(ERC721.ownerOf(tokenId) == msg.sender, 'only owner can burn');
 		super._burn(tokenId);
 	}
-
-	function getAccountItems(address account) public view returns (uint256[] memory) {
-		require(market != address(0));
-		uint256 ownedItems = 0;
-		for (uint256 i = 0; i < _tokenId; i++) {
-			if (ERC721.ownerOf(i) == account) {
-				ownedItems++;
-			}
-		}
-
-		uint256[] memory ret = new uint256[](ownedItems);
-		uint256 retIndex = 0;
-		for (uint256 i = 0; i < _tokenId; i++) {
-			if (ERC721.ownerOf(i) == account) {
-				ret[retIndex] = i;
-				retIndex++;
-			}
-		}
-		return ret;
-	}
 }

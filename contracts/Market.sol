@@ -166,4 +166,24 @@ contract Market {
 		require(msg.sender == _admin, 'not admin');
 		_listingFee = amount;
 	}
+
+	function getAccountItems(address account) public view returns (uint256[] memory) {
+		uint256 ownedItems = 0;
+		uint256 _tokenId = _item._tokenId();
+		for (uint256 i = 0; i < _tokenId; i++) {
+			if (_item.ownerOf(i) == account) {
+				ownedItems++;
+			}
+		}
+
+		uint256[] memory ret = new uint256[](ownedItems);
+		uint256 retIndex = 0;
+		for (uint256 i = 0; i < _tokenId; i++) {
+			if (_item.ownerOf(i) == account) {
+				ret[retIndex] = i;
+				retIndex++;
+			}
+		}
+		return ret;
+	}
 }
