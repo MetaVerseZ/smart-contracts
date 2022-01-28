@@ -15,18 +15,16 @@ const test = () => {
 			listings.map(async id => {
 				await market.cancel(id);
 				const listing = await market.getListing(id);
-				expect(listing.status).to.equal(1);
+				expect(listing.owner).to.equal(ethers.constants.AddressZero);
 			})
 		);
 
-		const totalNumberOfListings = ethers.utils.formatUnits(await market._totalNumberOfListings(), 0);
-		const numberOfListedItems = ethers.utils.formatUnits(await market.numberOfListedItems(), 0);
+		const totalNumberOfListings = parseInt(ethers.utils.formatUnits(await market._totalNumberOfListings(), 0));
+		const numberOfListedItems = parseInt(ethers.utils.formatUnits(await market.numberOfListedItems(), 0));
 
-		const unlistedItems = await market.getUnlistedItems();
-
-		expect(unlistedItems.length).to.equal(totalNumberOfListings - numberOfListedItems);
-		expect(parseInt(ethers.utils.formatUnits(unlistedItems[0].id, 0))).to.equal(5);
-		expect(parseInt(ethers.utils.formatUnits(unlistedItems[1].id, 0))).to.equal(6);
+		expect(totalNumberOfListings > numberOfListedItems).to.equal(true);
+		expect((await market.getListing(5)).owner).to.equal(ethers.constants.AddressZero);
+		expect((await market.getListing(6)).owner).to.equal(ethers.constants.AddressZero);
 	});
 
 	it('list again', async () => {
@@ -36,19 +34,17 @@ const test = () => {
 			listings.map(async id => {
 				await market.listItem(id, ethers.utils.parseEther('100'));
 				const listing = await market.getListing(id);
-				expect(listing.status).to.equal(0);
+				expect(listing.owner).to.equal(main.address);
 			})
 		);
 
-		const totalNumberOfListings = ethers.utils.formatUnits(await market._totalNumberOfListings(), 0);
-		const numberOfListedItems = ethers.utils.formatUnits(await market.numberOfListedItems(), 0);
+		const totalNumberOfListings = parseInt(ethers.utils.formatUnits(await market._totalNumberOfListings(), 0));
+		const numberOfListedItems = parseInt(ethers.utils.formatUnits(await market.numberOfListedItems(), 0));
 
-		const unlistedItems = await market.getUnlistedItems();
-
-		expect(unlistedItems.length).to.equal(totalNumberOfListings - numberOfListedItems);
+		expect(totalNumberOfListings > numberOfListedItems).to.equal(true);
 
 		const numListings = await market._totalNumberOfListings();
-		expect(parseInt(ethers.utils.formatUnits(numListings, 0))).to.equal(10);
+		expect(parseInt(ethers.utils.formatUnits(numListings, 0))).to.equal(12);
 	});
 
 	it('number of sold items', async () => {
