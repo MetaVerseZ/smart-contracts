@@ -31,7 +31,6 @@ contract Market {
 	event Unlisted(uint256 listingId, address owner);
 	event Sold(uint256 listingId, address buyer, uint256 id, uint256 price);
 
-	uint256 public _totalNumberOfListings;
 	uint256 public _numberOfSales;
 
 	mapping(uint256 => Listing) public _listings;
@@ -47,8 +46,6 @@ contract Market {
 		_mzt.transferFrom(msg.sender, address(this), _listingFee);
 
 		emit Listed(id, msg.sender, id, price);
-
-		_totalNumberOfListings++;
 	}
 
 	function buyItem(uint256 listingId) public {
@@ -93,7 +90,7 @@ contract Market {
 		uint256 n = numberOfListedItems();
 		Listing[] memory ret = new Listing[](n);
 		uint256 current = 0;
-		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
+		for (uint256 i = 0; i < _item._tokenId(); i++) {
 			if (_listings[i].owner != address(0)) {
 				ret[current] = _listings[i];
 				current++;
@@ -102,14 +99,27 @@ contract Market {
 		return ret;
 	}
 
+	function unlisted() public view returns (uint256[] memory) {
+		uint256 n = _item._tokenId() - numberOfListedItems();
+		uint256[] memory ret = new uint256[](n);
+		uint256 current = 0;
+		for (uint256 i = 0; i < _item._tokenId(); i++) {
+			if (_listings[i].owner == address(0)) {
+				ret[current] = i;
+				current++;
+			}
+		}
+		return ret;
+	}
+
 	function numberOfListedItems() public view returns (uint256) {
-		Listing[] memory l = new Listing[](_totalNumberOfListings);
-		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
+		Listing[] memory l = new Listing[](_item._tokenId());
+		for (uint256 i = 0; i < _item._tokenId(); i++) {
 			l[i] = _listings[i];
 		}
 
 		uint256 num = 0;
-		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
+		for (uint256 i = 0; i < _item._tokenId(); i++) {
 			if (l[i].owner != address(0)) {
 				num++;
 			}

@@ -4,8 +4,7 @@ const { ethers } = require('hardhat');
 
 const test = () => {
 	it('number of listings', async () => {
-		const numListings = await market._totalNumberOfListings();
-		expect(parseInt(ethers.utils.formatUnits(numListings, 0))).to.equal(10);
+		expect((await market.listings()).length).to.equal(10);
 	});
 
 	it('unlist items', async () => {
@@ -19,12 +18,7 @@ const test = () => {
 			})
 		);
 
-		const totalNumberOfListings = parseInt(ethers.utils.formatUnits(await market._totalNumberOfListings(), 0));
-		const numberOfListedItems = parseInt(ethers.utils.formatUnits(await market.numberOfListedItems(), 0));
-
-		expect(totalNumberOfListings > numberOfListedItems).to.equal(true);
-		expect((await market.getListing(5)).owner).to.equal(ethers.constants.AddressZero);
-		expect((await market.getListing(6)).owner).to.equal(ethers.constants.AddressZero);
+		expect(parseInt(ethers.utils.formatUnits(await market.unlisted(), 0))).to.equal(2);
 	});
 
 	it('list again', async () => {
@@ -38,13 +32,7 @@ const test = () => {
 			})
 		);
 
-		const totalNumberOfListings = parseInt(ethers.utils.formatUnits(await market._totalNumberOfListings(), 0));
-		const numberOfListedItems = parseInt(ethers.utils.formatUnits(await market.numberOfListedItems(), 0));
-
-		expect(totalNumberOfListings > numberOfListedItems).to.equal(true);
-
-		const numListings = await market._totalNumberOfListings();
-		expect(parseInt(ethers.utils.formatUnits(numListings, 0))).to.equal(12);
+		expect(parseInt(ethers.utils.formatUnits(await market.unlisted(), 0))).to.equal(0);
 	});
 
 	it('number of sold items', async () => {
