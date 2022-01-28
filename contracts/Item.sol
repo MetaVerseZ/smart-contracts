@@ -10,6 +10,8 @@ contract Item is ERC721URIStorage {
 	address public market = address(0);
 	address public admin;
 
+	event Minted(address owner, uint256 tokenId);
+
 	constructor(address _adminAddress) ERC721('Meta Z Item', 'MZI') {
 		admin = _adminAddress;
 	}
@@ -29,6 +31,7 @@ contract Item is ERC721URIStorage {
 		_safeMint(msg.sender, tokenId);
 		_setTokenURI(tokenId, uri);
 		setApprovalForAll(market, true);
+		emit Minted(msg.sender, tokenId);
 		_tokenId++;
 	}
 

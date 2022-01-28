@@ -30,12 +30,12 @@ const test = l => {
 					await market.listItem(id, testItemPrice);
 
 					const listing = await market.getListing(id);
-					expect(listing.status).to.equal(0);
+					expect(listing.owner).to.equal(main.address);
 					expect(await item.tokenURI(id)).to.equal(`ipfs://${id}`);
 				})
 			);
 
-			const listings = await market.getAllListings();
+			const listings = await market.listings();
 			expect(listings.length).to.equal(length);
 		});
 	};

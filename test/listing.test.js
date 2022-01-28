@@ -5,7 +5,7 @@ describe('Listing Tests', () => {
 
 	describe('Mint', require('./partials/mint.test')(10));
 
-	describe('Listing', require('./partials/list.test'));
+	// describe('Listing', require('./partials/list.test'));
 
 	after(() => {
 		console.log('\n\tToken address:', token.address);

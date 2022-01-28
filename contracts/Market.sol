@@ -21,16 +21,10 @@ contract Market {
 		_listingFee = 1000 ether;
 	}
 
-	enum ListingStatus {
-		Listed,
-		NotListed
-	}
-
 	struct Listing {
-		ListingStatus status;
-		address owner;
 		uint256 id;
 		uint256 price;
+		address owner;
 	}
 
 	event Listed(uint256 listingId, address owner, uint256 id, uint256 price);
@@ -45,25 +39,22 @@ contract Market {
 	function listItem(uint256 id, uint256 price) public {
 		require(_mzt.balanceOf(msg.sender) >= _listingFee, 'balance too low for listing fee');
 		require(msg.sender == _item.ownerOf(id), 'listing can be done only by owner');
-		// require(_listings[id].status != ListingStatus.Listed, 'item already listed');
+		require(_listings[id].owner == address(0), 'item already listed');
 
-		Listing memory listing = Listing(ListingStatus.Listed, msg.sender, id, price);
-		_listings[id] = listing;
+		_listings[id] = Listing(id, price, msg.sender);
 
 		_mzt.transferFrom(msg.sender, address(this), _listingFee);
 
 		emit Listed(id, msg.sender, id, price);
 
-		if (id >= _totalNumberOfListings) {
-			_totalNumberOfListings++;
-		}
+		_totalNumberOfListings++;
 	}
 
 	function buyItem(uint256 listingId) public {
 		Listing storage listing = _listings[listingId];
 
 		require(msg.sender != listing.owner, 'owner cannot be buyer');
-		require(listing.status == ListingStatus.Listed, 'listing is not active');
+		require(listing.owner != address(0), 'listing is not active');
 
 		_mzt.transferFrom(msg.sender, address(this), listing.price);
 		_mzt.approve(listing.owner, listing.price);
@@ -71,10 +62,11 @@ contract Market {
 
 		_item.transferFrom(listing.owner, msg.sender, listing.id);
 
-		listing.status = ListingStatus.NotListed;
 		listing.owner = msg.sender;
 
 		_numberOfSales++;
+
+		delete _listings[listingId];
 
 		emit Sold(listingId, msg.sender, listing.id, listing.price);
 	}
@@ -83,11 +75,11 @@ contract Market {
 		Listing storage listing = _listings[listingId];
 
 		require(msg.sender == listing.owner, 'only owner can cancel listing');
-		require(listing.status == ListingStatus.Listed, 'listing is not active');
+		require(listing.owner != address(0), 'listing is not active');
 
 		_mzt.transfer(msg.sender, _listingFee);
 
-		listing.status = ListingStatus.NotListed;
+		delete _listings[listingId];
 
 		emit Unlisted(listingId, listing.owner);
 	}
@@ -96,40 +88,13 @@ contract Market {
 		return _listings[listingId];
 	}
 
-	function getAllListings() public view returns (Listing[] memory) {
-		Listing[] memory ret = new Listing[](_totalNumberOfListings);
-		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
-			ret[i] = _listings[i];
-		}
-		return ret;
-	}
-
-	function getListedItems() public view returns (Listing[] memory) {
-		Listing[] memory l = getAllListings();
+	function listings() public view returns (Listing[] memory) {
 		uint256 n = numberOfListedItems();
-
 		Listing[] memory ret = new Listing[](n);
 		uint256 current = 0;
-
 		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
-			if (l[i].status == ListingStatus.Listed) {
-				ret[current] = l[i];
-				current++;
-			}
-		}
-		return ret;
-	}
-
-	function getUnlistedItems() public view returns (Listing[] memory) {
-		Listing[] memory l = getAllListings();
-		uint256 n = _totalNumberOfListings - numberOfListedItems();
-
-		Listing[] memory ret = new Listing[](n);
-		uint256 current = 0;
-
-		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
-			if (l[i].status == ListingStatus.NotListed) {
-				ret[current] = l[i];
+			if (_listings[i].owner != address(0)) {
+				ret[current] = _listings[i];
 				current++;
 			}
 		}
@@ -137,10 +102,14 @@ contract Market {
 	}
 
 	function numberOfListedItems() public view returns (uint256) {
-		Listing[] memory l = getAllListings();
+		Listing[] memory l = new Listing[](_totalNumberOfListings);
+		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
+			l[i] = _listings[i];
+		}
+
 		uint256 num = 0;
 		for (uint256 i = 0; i < _totalNumberOfListings; i++) {
-			if (l[i].status == ListingStatus.Listed) {
+			if (l[i].owner != address(0)) {
 				num++;
 			}
 		}

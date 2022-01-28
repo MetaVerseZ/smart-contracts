@@ -10,15 +10,15 @@ const test = () => {
 		await token.connect(buyer).approve(market.address, listing.price);
 		await market.connect(buyer).buyItem(listing.id);
 		const updatedListing = await market.getListing(listing.id);
-		expect(updatedListing.owner).to.equal(buyer.address);
-		expect(updatedListing.status).to.equal(1);
+		expect(updatedListing.owner).to.equal(ethers.constants.AddressZero);
+		expect(await item.ownerOf(listing.id)).to.equal(buyer.address);
 	});
 
 	it('list item again after buying', async () => {
 		await market.connect(buyer).listItem(0, testItemPrice);
 		const listing = await market.getListing(0);
-		expect(listing.status).to.equal(0);
-		const listings = await market.getAllListings();
+		expect(listing.owner).to.equal(buyer.address);
+		const listings = await market.listings();
 		expect(listings.length).to.equal(2);
 	});
 
@@ -33,7 +33,7 @@ const test = () => {
 
 		await market.cancel(ID);
 		const listing = await market.getListing(ID);
-		expect(listing.status).to.equal(1);
+		expect(listing.owner).to.equal(ethers.constants.AddressZero);
 
 		expect(parseFloat(ethers.utils.formatEther(await token.balanceOf(main.address))), parseFloat(ethers.utils.formatEther(initialBalance)));
 	});
@@ -49,7 +49,10 @@ const test = () => {
 
 	it('cannot list a token owned by someone else', async () => {
 		try {
-			await market.listItem(1, testItemPrice);
+			await item.connect(buyer).mint('test');
+
+			await token.approve(market.address, listingFee);
+			await market.listItem(parseInt(ethers.utils.formatUnits(await item._tokenId(), 0)) - 1, testItemPrice);
 		} catch (error) {
 			expect(error.message.includes('listing can be done only by owner')).to.equal(true);
 		}
