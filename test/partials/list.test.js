@@ -60,6 +60,14 @@ const test = () => {
 
 		expect(parseInt(ethers.utils.formatUnits(await market._numberOfSales(), 0))).to.equal(listings.length);
 	});
+
+	it('cannot list an item that is not minted', async () => {
+		try {
+			await market.listItem(22, ethers.utils.parseUnits('5000', 'ether'));
+		} catch (error) {
+			expect(error.message.includes('item not minted')).to.equal(true);
+		}
+	});
 };
 
 module.exports = test;

@@ -37,6 +37,7 @@ contract Market {
 	mapping(uint256 => Listing) public _listings;
 
 	function listItem(uint256 id, uint256 price) public {
+		require(id < _item._tokenId(), 'item not minted');
 		require(_mzt.balanceOf(msg.sender) >= _listingFee, 'balance too low for listing fee');
 		require(msg.sender == _item.ownerOf(id), 'listing can be done only by owner');
 		require(_listings[id].owner == address(0), 'item already listed');
