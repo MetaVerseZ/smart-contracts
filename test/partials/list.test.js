@@ -18,7 +18,7 @@ const test = () => {
 			})
 		);
 
-		expect(parseInt(ethers.utils.formatUnits(await market.unlisted(), 0))).to.equal(2);
+		expect((await market.unlisted()).length).to.equal(2);
 	});
 
 	it('list again', async () => {
@@ -32,7 +32,7 @@ const test = () => {
 			})
 		);
 
-		expect(parseInt(ethers.utils.formatUnits(await market.unlisted(), 0))).to.equal(0);
+		expect((await market.unlisted()).length).to.equal(0);
 	});
 
 	it('number of sold items', async () => {
