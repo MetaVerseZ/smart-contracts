@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 const test = () => {
 	it('withdraw', async () => {
@@ -12,20 +13,11 @@ const test = () => {
 	});
 
 	it('leave fees for unsold items', async () => {
-		try {
-			await market.connect(admin).withdrawAll();
-		} catch (error) {
-			expect(error.message.includes('leave fees for unsold items')).to.equal(true);
-		}
+		await expectRevert(market.connect(admin).withdrawAll(), 'leave fees for unsold items');
 	});
 
 	it('cannot withdraw if not admin', async () => {
-		try {
-			await market.withdrawAll();
-			expect(true).to.equal(false);
-		} catch (error) {
-			expect(error.message.includes('not admin')).to.equal(true);
-		}
+		await expectRevert(market.withdrawAll(), 'not admin');
 	});
 };
 

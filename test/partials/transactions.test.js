@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 const test = () => {
 	before(async () => (listingFee = (await market._listingFee()).toString()));
@@ -48,58 +49,33 @@ const test = () => {
 	});
 
 	it('cannot list a token owned by someone else', async () => {
-		try {
-			await item.connect(buyer).mint('test');
+		await item.connect(buyer).mint('test');
 
-			await token.approve(market.address, listingFee);
-			await market.listItem(parseInt(ethers.utils.formatUnits(await item._tokenId(), 0)) - 1, testItemPrice);
-		} catch (error) {
-			expect(error.message.includes('listing can be done only by owner')).to.equal(true);
-		}
+		await token.approve(market.address, listingFee);
+		await expectRevert(market.listItem(parseInt(ethers.utils.formatUnits(await item._tokenId(), 0)) - 1, testItemPrice), 'listing can be done only by owner');
 	});
 
 	it('cannot cancel a token owned by someone else', async () => {
-		try {
-			await market.connect(buyer).cancel(1);
-		} catch (error) {
-			expect(error.message.includes('only owner can cancel listing')).to.equal(true);
-		}
+		await expectRevert(market.connect(buyer).cancel(1), 'only owner can cancel listing');
 	});
 
 	it('cannot buy an owned item', async () => {
-		try {
-			await market.buyItem(1);
-		} catch (error) {
-			expect(error.message.includes('owner cannot be buyer')).to.equal(true);
-		}
+		await expectRevert(market.buyItem(1), 'owner cannot be buyer');
 	});
 
 	it('cannot buy an inactive item', async () => {
-		try {
-			await market.connect(buyer).buyItem(2);
-		} catch (error) {
-			expect(error.message.includes('listing is not active')).to.equal(true);
-		}
+		await expectRevert(market.connect(buyer).buyItem(2), 'listing is not active');
 	});
 
 	it('catch insufficient listing fee', async () => {
-		try {
-			const account = (await ethers.getSigners())[3];
-			await item.connect(account).mint('http://example.com/4');
-			await market.connect(account).listItem(3, testItemPrice);
-			await market.connect(account).buyItem(1);
-		} catch (error) {
-			expect(error.message.includes('balance too low for listing fee')).to.equal(true);
-		}
+		const account = (await ethers.getSigners())[3];
+		await item.connect(account).mint('http://example.com/4');
+		await expectRevert(market.connect(account).listItem(3, testItemPrice), 'balance too low for listing fee');
 	});
 
 	it('catch low balance for buy payment', async () => {
-		try {
-			const account = (await ethers.getSigners())[3];
-			await market.connect(account).buyItem(1);
-		} catch (error) {
-			expect(error.message.includes('balance too low')).to.equal(true);
-		}
+		const account = (await ethers.getSigners())[3];
+		await expectRevert(market.connect(account).buyItem(1), 'balance too low');
 	});
 };
 
