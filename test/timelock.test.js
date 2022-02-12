@@ -19,7 +19,7 @@ describe('Timelock tests', () => {
 
 	describe('Timelock', () => {
 		before(async () => {
-			[deployer, account1, account2, account3, account4] = await ethers.getSigners();
+			[deployer, account1, account2, account3, account4, account5] = await ethers.getSigners();
 
 			const Timelock = await ethers.getContractFactory('Timelock');
 			timelock = await Timelock.deploy(token.address, [account1.address, account3.address]);
@@ -60,6 +60,58 @@ describe('Timelock tests', () => {
 
 			await withdrawTest(account4, account3);
 			await withdrawTest(account2, account4);
+		});
+	});
+
+	describe('TimelockMulti Tests', () => {
+		before(async () => {
+			const TimelockMulti = await ethers.getContractFactory('TimelockMulti');
+			timelockmulti = await TimelockMulti.deploy(token.address, [account1.address, account2.address]);
+			await timelockmulti.deployed();
+
+			await token.connect(account2).transfer(timelockmulti.address, ethers.utils.parseEther('75000000'));
+			await token.connect(account2).transfer(account5.address, await token.balanceOf(account2.address));
+		});
+
+		it('cannot withdraw too early', async () => {
+			await expectRevert(timelockmulti.withdraw(), 'too early');
+		});
+
+		it('cannot withdraw if not owner', async () => {
+			await expectRevert(timelockmulti.connect(account3).withdraw(), 'owner only');
+			await expectRevert(timelockmulti.connect(account4).withdraw(), 'owner only');
+		});
+
+		it('withdraw from deployer after time', async () => {
+			const initialBalance = parseInt(ethers.utils.formatEther(await token.balanceOf(deployer.address)));
+			await time.increase(time.duration.days(1));
+			await timelockmulti.withdraw();
+			expect(parseInt(ethers.utils.formatEther(await token.balanceOf(deployer.address)))).to.equal(initialBalance + 20000000);
+			expect(parseInt(ethers.utils.formatEther(await token.balanceOf(timelockmulti.address)))).to.equal(55000000);
+		});
+
+		it('cannot withdraw second time until time passes', async () => {
+			await expectRevert(timelockmulti.withdraw(), 'cannot withdraw right now');
+		});
+
+		it('withdraw second time', async () => {
+			const initialBalance = parseInt(ethers.utils.formatEther(await token.balanceOf(account1.address)));
+			await time.increase(time.duration.days(1));
+			await timelockmulti.connect(account1).withdraw();
+			expect(parseInt(ethers.utils.formatEther(await token.balanceOf(account1.address)))).to.equal(initialBalance + 25000000);
+			expect(parseInt(ethers.utils.formatEther(await token.balanceOf(timelockmulti.address)))).to.equal(30000000);
+		});
+
+		it('cannot withdraw third time until time passes', async () => {
+			await expectRevert(timelockmulti.withdraw(), 'cannot withdraw right now');
+		});
+
+		it('withdraw third time', async () => {
+			const initialBalance = parseInt(ethers.utils.formatEther(await token.balanceOf(account2.address)));
+			await time.increase(time.duration.days(1));
+			await timelockmulti.connect(account2).withdraw();
+			expect(parseInt(ethers.utils.formatEther(await token.balanceOf(account2.address)))).to.equal(initialBalance + 30000000);
+			expect(parseInt(ethers.utils.formatEther(await token.balanceOf(timelockmulti.address)))).to.equal(0);
 		});
 	});
 });
