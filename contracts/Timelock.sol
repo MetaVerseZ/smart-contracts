@@ -36,4 +36,9 @@ contract Timelock {
 		}
 		return owner;
 	}
+
+	function setOwners(address[] memory owners) public {
+		require(isOwner(msg.sender), 'owner only');
+		_owners = owners;
+	}
 }
