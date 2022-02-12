@@ -58,7 +58,7 @@ describe('Timelock tests', () => {
 			await expectRevert(timelock.connect(account1).withdraw(), 'owner only');
 			await expectRevert(timelock.connect(account3).withdraw(), 'owner only');
 
-			await withdrawTest(account4);
+			await withdrawTest(account4, account3);
 			await withdrawTest(account2, account4);
 		});
 	});
