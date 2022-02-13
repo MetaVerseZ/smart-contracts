@@ -6,8 +6,9 @@ import './Token.sol';
 contract TimelockMulti {
 	uint256[] public _durations = [1 days, 2 days, 3 days];
 	uint256[] public _amounts = [20000000 ether, 25000000 ether, 30000000 ether];
-	bool[] public _withdrawn;
 	uint256[] public _end;
+	bool[] public _withdrawn;
+
 	address public immutable _deployer;
 	address[] public _owners;
 	Token _token;
@@ -41,6 +42,23 @@ contract TimelockMulti {
 
 		require(amount > 0 || !early, 'cannot withdraw right now');
 		_token.transfer(msg.sender, amount);
+	}
+
+	function withdrawLeft() public {
+		require(isOwner(msg.sender), 'owner only');
+		require(block.timestamp >= _end[_end.length - 1], 'cannot withdraw right now');
+
+		bool withdrawnAll = true;
+		for (uint256 i = 0; i < _withdrawn.length; i++) {
+			if (!_withdrawn[i]) {
+				withdrawnAll = false;
+				break;
+			}
+		}
+
+		if (withdrawnAll) {
+			_token.transfer(msg.sender, _token.balanceOf(address(this)));
+		}
 	}
 
 	function isOwner(address account) public view returns (bool) {
