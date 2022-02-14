@@ -4,24 +4,78 @@ pragma solidity ^0.8.9;
 import './Token.sol';
 
 contract Timelock {
-	uint256 public constant _duration = 1 days;
-	uint256 public immutable _end;
-	address public immutable _deployer;
+	address public _deployer;
 	address[] public _owners;
 	Token _token;
 
+	struct Lock {
+		uint256 amount;
+		uint256 unlockedAt;
+	}
+
+	Lock[] _lock;
+
 	constructor(address token, address[] memory owners) {
-		_end = block.timestamp + _duration;
 		_deployer = msg.sender;
 		_token = Token(token);
 		_owners = owners;
 	}
 
-	function withdraw() public {
+	function lock(uint256[] memory amounts, uint256[] memory daysToUnlock) public {
+		require(daysToUnlock.length == amounts.length, 'arrays should have the same length');
+
+		uint256 total = 0;
+		for (uint256 i = 0; i < amounts.length; i++) {
+			total += amounts[i];
+		}
+
+		require(total <= _token.balanceOf(address(this)), 'contract balance too low');
+
+		for (uint256 i = 0; i < amounts.length; i++) {
+			_lock.push(Lock(amounts[i], block.timestamp + daysToUnlock[i] * 1 days));
+		}
+	}
+
+	function withdrawAll() public {
 		require(isOwner(msg.sender), 'owner only');
-		require(block.timestamp >= _end, 'too early');
-		uint256 amount = _token.balanceOf(address(this));
+
+		uint256 unlocked = unlockedAmount();
+		require(unlocked > 0, 'nothing to withdraw');
+		withdraw(unlocked);
+	}
+
+	function withdraw(uint256 amount) public {
+		uint256 balance = _token.balanceOf(address(this));
+		uint256 locked = lockedAmount();
+		uint256 unlocked = unlockedAmount();
+
+		require(unlocked > 0, 'nothing to withdraw');
+
+		require(isOwner(msg.sender), 'owner only');
+
+		require(amount > 0, 'amount should be larger than 0');
+		require(amount <= unlockedAmount(), 'amount too large');
+
+		require(balance > locked, 'nothing to withdraw');
+		require(balance - locked >= amount, 'amount too large');
+
 		_token.transfer(msg.sender, amount);
+	}
+
+	function lockedAmount() public view returns (uint256) {
+		uint256 amount = 0;
+		for (uint256 i = 0; i < _lock.length; i++) {
+			if (_lock[i].unlockedAt < block.timestamp) continue;
+			amount += _lock[i].amount;
+		}
+		return amount;
+	}
+
+	function unlockedAmount() public view returns (uint256) {
+		uint256 balance = _token.balanceOf(address(this));
+		uint256 locked = lockedAmount();
+		if (balance > locked) return (balance - locked);
+		return 0;
 	}
 
 	function isOwner(address account) public view returns (bool) {
