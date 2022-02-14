@@ -6,22 +6,22 @@ import './Token.sol';
 contract Timelock {
 	address public _deployer;
 	address[] public _owners;
-	Token _token;
+	Token _token = Token(0x5EF6b5ABaA7e9b75Fa4DaEBF0Fc722f9AFF12B40);
 
 	struct Lock {
 		uint256 amount;
 		uint256 unlockedAt;
+		string description;
 	}
 
-	Lock[] _lock;
+	Lock[] public _lock;
 
-	constructor(address token, address[] memory owners) {
+	constructor(address[] memory owners) {
 		_deployer = msg.sender;
-		_token = Token(token);
 		_owners = owners;
 	}
 
-	function lock(uint256[] memory amounts, uint256[] memory daysToUnlock) public {
+	function lock(uint256[] memory amounts, uint256[] memory daysToUnlock, string[] memory descriptions) public {
 		require(daysToUnlock.length == amounts.length, 'arrays should have the same length');
 
 		uint256 total = 0;
@@ -32,7 +32,7 @@ contract Timelock {
 		require(total <= _token.balanceOf(address(this)), 'contract balance too low');
 
 		for (uint256 i = 0; i < amounts.length; i++) {
-			_lock.push(Lock(amounts[i], block.timestamp + daysToUnlock[i] * 1 days));
+			_lock.push(Lock(amounts[i], block.timestamp + daysToUnlock[i] * 1 days, descriptions[i]));
 		}
 	}
 
