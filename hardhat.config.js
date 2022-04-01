@@ -2,7 +2,7 @@ require('@nomiclabs/hardhat-ethers');
 require('@openzeppelin/hardhat-upgrades');
 require('@nomiclabs/hardhat-etherscan');
 
-const { bscApi } = require('./secret.json');
+const { bscApi, accounts } = require('./secret.json');
 
 module.exports = {
 	defaultNetwork: 'ganache',
@@ -13,10 +13,12 @@ module.exports = {
 		bsc: {
 			url: 'https://bsc-dataseed.binance.org/',
 			chainId: 56,
+			accounts,
 		},
 		testnet: {
 			url: 'https://data-seed-prebsc-1-s1.binance.org:8545',
 			chainId: 97,
+			accounts,
 		},
 	},
 	solidity: {
