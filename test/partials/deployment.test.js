@@ -10,15 +10,22 @@ const test = () => {
 	it('deploy item contract', async () => {
 		const Item = await ethers.getContractFactory('Item');
 		admin = (await ethers.getSigners())[9];
-		item = await Item.deploy(admin.address);
+		item = await Item.deploy();
 		await item.deployed();
+	});
+
+	it('deploy land contract', async () => {
+		const Land = await ethers.getContractFactory('Land');
+		land = await Land.deploy();
+		await land.deployed();
 	});
 
 	it('deploy market contract', async () => {
 		const Market = await ethers.getContractFactory('Market');
-		market = await Market.deploy(token.address, item.address, admin.address);
+		market = await Market.deploy(token.address, item.address, 10);
 		await market.deployed();
-		await item.connect(admin).setMarket(market.address);
+		await item.setMarket(market.address);
+		await land.setMarket(market.address);
 	});
 };
 
