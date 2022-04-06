@@ -7,7 +7,7 @@ describe('Main Tests', () => {
 
 	describe('Item', require('./partials/item.test')());
 
-	describe('Item Transactions', require('./partials/transactions.test'));
+	describe('Transactions', require('./partials/transactions.test'));
 
 	describe('Withdraw', require('./partials/withdraw.test'));
 

@@ -5,10 +5,13 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import './Land.sol';
 import './Item.sol';
 import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
+import '@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol';
 
-contract Market is ERC1155Holder {
+contract Market is ERC1155Holder, ERC721Holder {
 	ERC20 public _mzt;
-	uint256 public _listedItems = 0;
+	Land public _land;
+	uint256 public _maxListedItemId = 0;
+	uint256 public _maxListedLandId = 0;
 	address[] public _acceptedTokens;
 	address[] public _admins;
 	uint16 public _listingFeePermille;
@@ -23,6 +26,7 @@ contract Market is ERC1155Holder {
 		_admins = [msg.sender];
 		_listingFeePermille = fee;
 		_acceptedTokens = [item, land];
+		_land = Land(land);
 	}
 
 	struct ListingERC1155 {
@@ -46,6 +50,7 @@ contract Market is ERC1155Holder {
 
 	mapping(uint256 => ListingERC1155) public _listingsERC1155;
 	mapping(uint256 => ListingERC721) public _listingsERC721;
+	mapping(uint256 => ListingERC721) public _landListings;
 
 	function listERC1155(
 		address contractAddress,
@@ -76,7 +81,7 @@ contract Market is ERC1155Holder {
 
 		_item.safeTransferFrom(msg.sender, address(this), id, amount, '');
 
-		_listedItems++;
+		if (id >= _maxListedItemId) _maxListedItemId = id + 1;
 
 		emit Listed(contractAddress, id, msg.sender, amount, price);
 	}
@@ -146,7 +151,6 @@ contract Market is ERC1155Holder {
 
 		if (_item.balanceOf(address(this), id) == 0) {
 			delete _listingsERC1155[id];
-			_listedItems--;
 		}
 	}
 
@@ -154,7 +158,7 @@ contract Market is ERC1155Holder {
 		require(tokenAccepted(contractAddress), 'token not accepted');
 		Item _item = Item(contractAddress);
 
-		require(isSeller(id, msg.sender), 'only owner can cancel listing');
+		require(isSeller(id, msg.sender), 'only seller can cancel listing');
 		require(_item.balanceOf(address(this), id) > 0, 'listing is not active');
 
 		uint256 index = getSellerIndex(id, msg.sender);
@@ -173,7 +177,6 @@ contract Market is ERC1155Holder {
 
 		if (_item.balanceOf(address(this), id) == 0) {
 			delete _listingsERC1155[id];
-			_listedItems--;
 		}
 	}
 
@@ -185,7 +188,7 @@ contract Market is ERC1155Holder {
 		require(tokenAccepted(contractAddress), 'token not accepted');
 
 		uint256 n = 0;
-		for (uint256 i = 0; i < _listedItems; i++) {
+		for (uint256 i = 0; i < _maxListedItemId; i++) {
 			if (_listingsERC1155[i]._contract == contractAddress && _listingsERC1155[i].sellers.length > 0) {
 				n++;
 			}
@@ -193,9 +196,77 @@ contract Market is ERC1155Holder {
 
 		ListingERC1155[] memory ret = new ListingERC1155[](n);
 		uint256 current = 0;
-		for (uint256 i = 0; i < _listedItems; i++) {
+		for (uint256 i = 0; i < _maxListedItemId; i++) {
 			if (_listingsERC1155[i]._contract == contractAddress && _listingsERC1155[i].sellers.length > 0) {
 				ret[current] = _listingsERC1155[i];
+				current++;
+			}
+		}
+		return ret;
+	}
+
+	function listLand(uint256 id, uint256 price) public {
+		require(id < _land._tokenId(), 'land not minted');
+		require(msg.sender == _land.ownerOf(id), 'listing can be done only by owner');
+		require(_landListings[id].seller == address(0), 'item already listed');
+
+		_landListings[id] = ListingERC721(address(_land), id, price, msg.sender);
+
+		_land.safeTransferFrom(msg.sender, address(this), id);
+
+		if (id >= _maxListedLandId) _maxListedLandId = id + 1;
+
+		emit Listed(address(_land), id, msg.sender, 1, price);
+	}
+
+	function buyLand(uint256 id) public {
+		ListingERC721 storage listing = _landListings[id];
+
+		require(listing.seller != address(0), 'listing is not active');
+		require(msg.sender != listing.seller, 'seller cannot be buyer');
+
+		uint256 amountForUser = _landListings[id].price - ((_landListings[id].price * ((_listingFeePermille * 1 ether) / 1000)) / 1 ether);
+
+		_mzt.transferFrom(msg.sender, address(this), listing.price);
+		_mzt.transfer(listing.seller, amountForUser);
+
+		_land.safeTransferFrom(address(this), msg.sender, id);
+
+		delete _landListings[id];
+
+		emit Sold(address(_land), id, msg.sender, 1, listing.price);
+	}
+
+	function cancelLand(uint256 id) public {
+		ListingERC721 storage listing = _landListings[id];
+
+		require(listing.seller != address(0), 'listing is not active');
+		require(msg.sender == listing.seller, 'only seller can cancel listing');
+
+		_land.safeTransferFrom(address(this), msg.sender, id);
+
+		delete _landListings[id];
+
+		emit Unlisted(address(_land), id, msg.sender);
+	}
+
+	function getLandListing(uint256 id) public view returns (ListingERC721 memory) {
+		return _landListings[id];
+	}
+
+	function landListings() public view returns (ListingERC721[] memory) {
+		uint256 n = 0;
+		for (uint256 i = 0; i < _maxListedItemId; i++) {
+			if (_landListings[i].seller != address(0)) {
+				n++;
+			}
+		}
+
+		ListingERC721[] memory ret = new ListingERC721[](n);
+		uint256 current = 0;
+		for (uint256 i = 0; i < _maxListedItemId; i++) {
+			if (_landListings[i].seller != address(0)) {
+				ret[current] = _landListings[i];
 				current++;
 			}
 		}

@@ -20,6 +20,7 @@ const test = () => {
 		const Land = await ethers.getContractFactory('Land');
 		land = await Land.deploy();
 		await land.deployed();
+		await land.setAdmins([main.address, admin.address]);
 	});
 
 	it('deploy market contract', async () => {
