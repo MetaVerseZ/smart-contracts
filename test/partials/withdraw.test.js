@@ -12,7 +12,7 @@ const test = () => {
 		const newBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
 		const newMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
 
-		expect(newBalance - initialBalance).to.equal(marketBalance);
+		expect(newBalance - initialBalance - marketBalance).to.be.below(0.00005);
 		expect(newMarketBalance).to.equal(0);
 	});
 

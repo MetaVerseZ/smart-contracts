@@ -5,8 +5,6 @@ const { expect } = require('chai');
 const test = l => {
 	const length = l ?? 2;
 	return () => {
-		const testItemPrice = ethers.utils.parseEther('100');
-
 		// const ipfs = create({ silent: true });
 		// const gateway = 'http://ipfs.io/ipfs';
 
@@ -24,11 +22,12 @@ const test = l => {
 					// const uri = `${gateway}/${cid}`;
 
 					const amount = Math.ceil(Math.random() * 100) + 20;
+					const price = ethers.utils.parseEther((Math.ceil(Math.random() * 1000) + 20).toString());
 
 					await item.mint(id.toString(), amount);
 					expect(await item.tokenURI(id)).to.equal(id.toString());
 
-					await market.listERC1155(item.address, id, testItemPrice, amount);
+					await market.listERC1155(item.address, id, price, amount);
 
 					const listing = await market.getERC1155Listing(id);
 
