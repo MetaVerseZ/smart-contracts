@@ -23,14 +23,14 @@ const test = l => {
 					// const { cid } = await ipfs.add(JSON.stringify(metadata));
 					// const uri = `${gateway}/${cid}`;
 
-					const amount = Math.ceil(Math.random() * 100);
+					const amount = Math.ceil(Math.random() * 100) + 20;
 
 					await item.mint(id.toString(), amount);
 					expect(await item.tokenURI(id)).to.equal(id.toString());
 
 					await market.listERC1155(item.address, id, testItemPrice, amount);
 
-					const listing = await market.getListing(id);
+					const listing = await market.getERC1155Listing(id);
 
 					expect(listing.sellers).to.include(main.address);
 
@@ -39,7 +39,7 @@ const test = l => {
 				})
 			);
 
-			const listings = await market.listings(item.address);
+			const listings = await market.listingsERC1155(item.address);
 			expect(listings.length).to.equal(length);
 		});
 	};

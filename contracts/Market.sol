@@ -1,169 +1,264 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import './Token.sol';
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import './Land.sol';
 import './Item.sol';
+import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 
-contract Market {
-	Token public _mzt;
-	Item public _item;
-	address public _admin;
-	uint256 public _listingFee;
+contract Market is ERC1155Holder {
+	ERC20 public _mzt;
+	uint256 public _listedItems = 0;
+	address[] public _acceptedTokens;
+	address[] public _admins;
+	uint16 public _listingFeePermille;
 
 	constructor(
 		address mztAddress,
-		address itemAddress,
-		address adminAddress
+		uint16 fee,
+		address item,
+		address land
 	) {
-		_mzt = Token(mztAddress);
-		_item = Item(itemAddress);
-		_admin = adminAddress;
-		_listingFee = 1000 ether;
+		_mzt = ERC20(mztAddress);
+		_admins = [msg.sender];
+		_listingFeePermille = fee;
+		_acceptedTokens = [item, land];
 	}
 
-	struct Listing {
+	struct ListingERC1155 {
+		address _contract;
 		uint256 id;
 		uint256 price;
-		address owner;
+		uint256[] amounts;
+		address[] sellers;
 	}
 
-	event Listed(uint256 listingId, address owner, uint256 id, uint256 price);
-	event Unlisted(uint256 listingId, address owner);
-	event Sold(uint256 listingId, address buyer, uint256 id, uint256 price);
-
-	uint256 public _numberOfSales;
-
-	mapping(uint256 => Listing) public _listings;
-
-	function listItem(uint256 id, uint256 price) public {
-		require(id < _item._tokenId(), 'item not minted');
-		require(_mzt.balanceOf(msg.sender) >= _listingFee, 'balance too low for listing fee');
-		require(msg.sender == _item.ownerOf(id), 'listing can be done only by owner');
-		require(_listings[id].owner == address(0), 'item already listed');
-
-		_listings[id] = Listing(id, price, msg.sender);
-
-		_mzt.transferFrom(msg.sender, address(this), _listingFee);
-
-		emit Listed(id, msg.sender, id, price);
+	struct ListingERC721 {
+		address _contract;
+		uint256 id;
+		uint256 price;
+		address seller;
 	}
 
-	function buyItem(uint256 listingId) public {
-		Listing storage listing = _listings[listingId];
+	event Listed(address contractAddress, uint256 id, address seller, uint256 amount, uint256 price);
+	event Unlisted(address contractAddress, uint256 id, address seller);
+	event Sold(address contractAddress, uint256 id, address buyer, uint256 amount, uint256 price);
 
-		require(msg.sender != listing.owner, 'owner cannot be buyer');
-		require(listing.owner != address(0), 'listing is not active');
+	mapping(uint256 => ListingERC1155) public _listingsERC1155;
+	mapping(uint256 => ListingERC721) public _listingsERC721;
 
-		_mzt.transferFrom(msg.sender, address(this), listing.price);
-		_mzt.approve(listing.owner, listing.price);
-		_mzt.transfer(listing.owner, listing.price);
+	function listERC1155(
+		address contractAddress,
+		uint256 id,
+		uint256 price,
+		uint256 amount
+	) public {
+		require(tokenAccepted(contractAddress), 'token not accepted');
+		Item _item = Item(contractAddress);
 
-		_item.transferFrom(listing.owner, msg.sender, listing.id);
+		require(_item.balanceOf(msg.sender, id) >= amount, 'listing can be done only by owner');
 
-		listing.owner = msg.sender;
+		if (_listingsERC1155[id].sellers.length == 0) {
+			uint256[] memory amounts;
+			address[] memory sellers;
+			_listingsERC1155[id] = ListingERC1155(contractAddress, id, price, amounts, sellers);
+			_listingsERC1155[id].amounts.push(amount);
+			_listingsERC1155[id].sellers.push(msg.sender);
+		} else {
+			if (isSeller(id, msg.sender)) {
+				uint256 index = getSellerIndex(id, msg.sender);
+				_listingsERC1155[id].amounts[index] += amount;
+			} else {
+				_listingsERC1155[id].amounts.push(amount);
+				_listingsERC1155[id].sellers.push(msg.sender);
+			}
+		}
 
-		_numberOfSales++;
+		_item.safeTransferFrom(msg.sender, address(this), id, amount, '');
 
-		delete _listings[listingId];
+		_listedItems++;
 
-		emit Sold(listingId, msg.sender, listing.id, listing.price);
+		emit Listed(contractAddress, id, msg.sender, amount, price);
 	}
 
-	function cancel(uint256 listingId) public {
-		Listing storage listing = _listings[listingId];
+	function buyERC1155(
+		address contractAddress,
+		uint256 id,
+		uint256 amount
+	) public {
+		require(tokenAccepted(contractAddress), 'token not accepted');
+		Item _item = Item(contractAddress);
 
-		require(msg.sender == listing.owner, 'only owner can cancel listing');
-		require(listing.owner != address(0), 'listing is not active');
+		require(!isSeller(id, msg.sender), 'seller cannot be buyer');
+		require(_item.balanceOf(address(this), id) > 0, 'listing is not active');
+		require(_item.balanceOf(address(this), id) > amount, 'above available amount');
 
-		_mzt.transfer(msg.sender, _listingFee);
+		_mzt.transferFrom(msg.sender, address(this), _listingsERC1155[id].price * amount);
 
-		delete _listings[listingId];
+		address[] memory buyingFrom = new address[](_listingsERC1155[id].sellers.length);
+		uint256[] memory buyingAmounts = new uint256[](_listingsERC1155[id].sellers.length);
+		uint256 leftToBuy = amount;
+		uint256 bought = 0;
 
-		emit Unlisted(listingId, listing.owner);
+		for (uint256 i = 0; i < _listingsERC1155[id].sellers.length; i++) {
+			if (leftToBuy > 0) {
+				if (_listingsERC1155[id].amounts[i] >= leftToBuy) {
+					buyingFrom[i] = _listingsERC1155[id].sellers[i];
+					buyingAmounts[i] = leftToBuy;
+
+					_listingsERC1155[id].amounts[i] -= leftToBuy;
+					leftToBuy = 0;
+
+					bought++;
+
+					break;
+				} else if (_listingsERC1155[id].amounts[i] < leftToBuy) {
+					buyingFrom[i] = _listingsERC1155[id].sellers[i];
+					buyingAmounts[i] = _listingsERC1155[id].amounts[i];
+
+					for (uint256 index = i; index < _listingsERC1155[id].sellers.length; index++) {
+						_listingsERC1155[id].amounts[index] = _listingsERC1155[id].amounts[index + 1];
+						_listingsERC1155[id].sellers[index] = _listingsERC1155[id].sellers[index + 1];
+					}
+
+					_listingsERC1155[id].amounts.pop();
+					_listingsERC1155[id].sellers.pop();
+
+					leftToBuy -= _listingsERC1155[id].amounts[i];
+
+					bought++;
+
+					continue;
+				}
+			}
+			break;
+		}
+
+		uint256 amountForUser = _listingsERC1155[id].price - ((_listingsERC1155[id].price * ((_listingFeePermille * 1 ether) / 1000)) / 1 ether);
+
+		for (uint256 i = 0; i < bought; i++) {
+			_mzt.transfer(_listingsERC1155[id].sellers[i], amountForUser * buyingAmounts[i]);
+		}
+
+		_item.safeTransferFrom(address(this), msg.sender, id, amount, '');
+
+		emit Sold(contractAddress, id, msg.sender, amount, _listingsERC1155[id].price);
+
+		if (_item.balanceOf(address(this), id) == 0) {
+			delete _listingsERC1155[id];
+			_listedItems--;
+		}
 	}
 
-	function getListing(uint256 listingId) public view returns (Listing memory) {
-		return _listings[listingId];
+	function cancelERC1155(address contractAddress, uint256 id) public {
+		require(tokenAccepted(contractAddress), 'token not accepted');
+		Item _item = Item(contractAddress);
+
+		require(isSeller(id, msg.sender), 'only owner can cancel listing');
+		require(_item.balanceOf(address(this), id) > 0, 'listing is not active');
+
+		uint256 index = getSellerIndex(id, msg.sender);
+
+		_item.safeTransferFrom(address(this), _listingsERC1155[id].sellers[index], id, _listingsERC1155[id].amounts[index], '');
+
+		for (uint256 i = index; i < _listingsERC1155[id].sellers.length - 1; i++) {
+			_listingsERC1155[id].amounts[i] = _listingsERC1155[id].amounts[i + 1];
+			_listingsERC1155[id].sellers[i] = _listingsERC1155[id].sellers[i + 1];
+		}
+
+		_listingsERC1155[id].amounts.pop();
+		_listingsERC1155[id].sellers.pop();
+
+		emit Unlisted(contractAddress, id, msg.sender);
+
+		if (_item.balanceOf(address(this), id) == 0) {
+			delete _listingsERC1155[id];
+			_listedItems--;
+		}
 	}
 
-	function listings() public view returns (Listing[] memory) {
-		uint256 n = numberOfListedItems();
-		Listing[] memory ret = new Listing[](n);
+	function getERC1155Listing(uint256 listingId) public view returns (ListingERC1155 memory) {
+		return _listingsERC1155[listingId];
+	}
+
+	function listingsERC1155(address contractAddress) public view returns (ListingERC1155[] memory) {
+		require(tokenAccepted(contractAddress), 'token not accepted');
+
+		uint256 n = 0;
+		for (uint256 i = 0; i < _listedItems; i++) {
+			if (_listingsERC1155[i]._contract == contractAddress && _listingsERC1155[i].sellers.length > 0) {
+				n++;
+			}
+		}
+
+		ListingERC1155[] memory ret = new ListingERC1155[](n);
 		uint256 current = 0;
-		for (uint256 i = 0; i < _item._tokenId(); i++) {
-			if (_listings[i].owner != address(0)) {
-				ret[current] = _listings[i];
+		for (uint256 i = 0; i < _listedItems; i++) {
+			if (_listingsERC1155[i]._contract == contractAddress && _listingsERC1155[i].sellers.length > 0) {
+				ret[current] = _listingsERC1155[i];
 				current++;
 			}
 		}
 		return ret;
-	}
-
-	function unlisted() public view returns (uint256[] memory) {
-		uint256 n = _item._tokenId() - numberOfListedItems();
-		uint256[] memory ret = new uint256[](n);
-		uint256 current = 0;
-		for (uint256 i = 0; i < _item._tokenId(); i++) {
-			if (_listings[i].owner == address(0)) {
-				ret[current] = i;
-				current++;
-			}
-		}
-		return ret;
-	}
-
-	function numberOfListedItems() public view returns (uint256) {
-		Listing[] memory l = new Listing[](_item._tokenId());
-		for (uint256 i = 0; i < _item._tokenId(); i++) {
-			l[i] = _listings[i];
-		}
-
-		uint256 num = 0;
-		for (uint256 i = 0; i < _item._tokenId(); i++) {
-			if (l[i].owner != address(0)) {
-				num++;
-			}
-		}
-		return num;
 	}
 
 	function withdrawAll() public {
-		require(msg.sender == _admin, 'not admin');
-		require(_mzt.balanceOf(address(this)) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
-		_mzt.approve(_admin, _mzt.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
-		_mzt.transfer(_admin, _mzt.balanceOf(address(this)) - numberOfListedItems() * _listingFee);
+		require(isAdmin(msg.sender), 'not admin');
+		_mzt.transfer(msg.sender, _mzt.balanceOf(address(this)));
 	}
 
-	function withdraw(uint256 amount) public {
-		require(msg.sender == _admin, 'not admin');
-		require((_mzt.balanceOf(address(this)) - amount) > (numberOfListedItems() * _listingFee), 'leave fees for unsold items');
-		require(amount <= _mzt.balanceOf(address(this)), 'amount is larger than token balance');
-		_mzt.approve(_admin, amount);
-		_mzt.transfer(_admin, amount);
+	function withdraw(address token, uint256 amount) public {
+		require(isAdmin(msg.sender), 'not admin');
+		ERC20 _token = ERC20(token);
+		require(amount <= _token.balanceOf(address(this)), 'amount is larger than token balance');
+		_token.transfer(msg.sender, amount);
 	}
 
-	function setListingFee(uint256 amount) public {
-		require(msg.sender == _admin, 'not admin');
-		_listingFee = amount;
+	function setListingFee(uint8 amount) public {
+		require(isAdmin(msg.sender), 'not admin');
+		_listingFeePermille = amount;
 	}
 
-	function getAccountItems(address account) public view returns (uint256[] memory) {
-		uint256 ownedItems = 0;
-		uint256 _tokenId = _item._tokenId();
-		for (uint256 i = 0; i < _tokenId; i++) {
-			if (_item.ownerOf(i) == account) {
-				ownedItems++;
+	function isSeller(uint256 id, address seller) public view returns (bool) {
+		if (_listingsERC1155[id].sellers.length > 0) {
+			for (uint256 i = 0; i < _listingsERC1155[id].sellers.length; i++) {
+				if (_listingsERC1155[id].sellers[i] == seller) return true;
 			}
 		}
+		return false;
+	}
 
-		uint256[] memory ret = new uint256[](ownedItems);
-		uint256 retIndex = 0;
-		for (uint256 i = 0; i < _tokenId; i++) {
-			if (_item.ownerOf(i) == account) {
-				ret[retIndex] = i;
-				retIndex++;
-			}
+	function getSellerIndex(uint256 id, address seller) public view returns (uint256) {
+		require(isSeller(id, seller), 'seller did not list this item');
+
+		for (uint256 i = 0; i < _listingsERC1155[id].sellers.length; i++) {
+			if (_listingsERC1155[id].sellers[i] == seller) return i;
 		}
-		return ret;
+
+		return 0;
+	}
+
+	function isAdmin(address account) public view returns (bool) {
+		for (uint256 i = 0; i < _admins.length; i++) {
+			if (_admins[i] == account) return true;
+		}
+		return false;
+	}
+
+	function setAdmins(address[] memory admins) public {
+		require(isAdmin(msg.sender), 'admin only');
+		_admins = admins;
+	}
+
+	function tokenAccepted(address token) public view returns (bool) {
+		for (uint256 i = 0; i < _acceptedTokens.length; i++) {
+			if (_acceptedTokens[i] == token) return true;
+		}
+		return false;
+	}
+
+	function setAcceptedTokens(address[] memory tokens) public {
+		require(isAdmin(msg.sender), 'admin only');
+		_acceptedTokens = tokens;
 	}
 }

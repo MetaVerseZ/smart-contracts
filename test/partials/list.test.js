@@ -1,10 +1,11 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
+const { expectRevert } = require('@openzeppelin/test-helpers');
 // const { create, urlSource } = require('ipfs-http-client');
 
 const test = () => {
 	it('number of listings', async () => {
-		expect((await market.listings()).length).to.equal(10);
+		expect((await market.listingsERC1155(item.address)).length).to.equal(10);
 	});
 
 	it('unlist items', async () => {
@@ -12,13 +13,11 @@ const test = () => {
 
 		await Promise.all(
 			listings.map(async id => {
-				await market.cancel(id);
-				const listing = await market.getListing(id);
-				expect(listing.owner).to.equal(ethers.constants.AddressZero);
+				await market.cancelERC1155(item.address, id);
+				const listing = await market.getERC1155Listing(id);
+				expect(listing.sellers.length).to.equal(0);
 			})
 		);
-
-		expect((await market.unlisted()).length).to.equal(2);
 	});
 
 	it('list again', async () => {
@@ -26,35 +25,15 @@ const test = () => {
 
 		await Promise.all(
 			listings.map(async id => {
-				await market.listItem(id, ethers.utils.parseEther('100'));
-				const listing = await market.getListing(id);
-				expect(listing.owner).to.equal(main.address);
+				await market.listERC1155(item.address, id, ethers.utils.parseEther('100'), 10);
+				const listing = await market.getERC1155Listing(id);
+				expect(listing.sellers).to.include(main.address);
 			})
 		);
-
-		expect((await market.unlisted()).length).to.equal(0);
 	});
 
-	it('number of sold items', async () => {
-		const listings = Array.from({ length: 3 }, (v, k) => k);
-
-		await Promise.all(
-			listings.map(async listing => {
-				listing = await market.getListing(listing);
-				await token.connect(buyer).approve(market.address, listing.price);
-				await market.connect(buyer).buyItem(listing.id);
-			})
-		);
-
-		expect(parseInt(ethers.utils.formatUnits(await market._numberOfSales(), 0))).to.equal(listings.length);
-	});
-
-	it('cannot list an item that is not minted', async () => {
-		try {
-			await market.listItem(22, ethers.utils.parseUnits('5000', 'ether'));
-		} catch (error) {
-			expect(error.message.includes('item not minted')).to.equal(true);
-		}
+	it('cannot list an item that is not minted/owned', async () => {
+		expectRevert(market.listERC1155(item.address, 22, ethers.utils.parseUnits('5000', 'ether'), 10), 'listing can be done only by owner');
 	});
 };
 

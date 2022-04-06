@@ -3,7 +3,7 @@ const { expect } = require('chai');
 
 const test = () => {
 	before(async () => {
-		[main, buyer, holder] = await ethers.getSigners();
+		[main, buyer, holder, third, fourth] = await ethers.getSigners();
 	});
 
 	it('token created and balance sent to holder', async () => {

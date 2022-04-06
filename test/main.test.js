@@ -3,15 +3,18 @@ describe('Main Tests', () => {
 
 	describe('Token', require('./partials/token.test'));
 
-	describe('Mint', require('./partials/mint.test')());
+	describe('Land', require('./partials/land.test')());
 
-	describe('Transactions', require('./partials/transactions.test'));
+	describe('Item', require('./partials/item.test')());
+
+	describe('Item Transactions', require('./partials/transactions.test'));
 
 	describe('Withdraw', require('./partials/withdraw.test'));
 
 	after(() => {
 		console.log('\n\tToken address:', token.address);
 		console.log('\tMarket address:', market.address);
+		console.log('\tLand address:', land.address);
 		console.log('\tItem address:', item.address);
 	});
 });

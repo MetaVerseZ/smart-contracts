@@ -3,7 +3,7 @@ describe('Listing Tests', () => {
 
 	describe('Token', require('./partials/token.test'));
 
-	describe('Mint', require('./partials/mint.test')(10));
+	describe('Item', require('./partials/item.test')(10));
 
 	describe('Listing', require('./partials/list.test'));
 

@@ -4,20 +4,20 @@ const { expectRevert } = require('@openzeppelin/test-helpers');
 
 const test = () => {
 	it('withdraw', async () => {
-		const balance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
-		await market.connect(admin).withdrawAll();
-		const newBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
+		const initialBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
 		const marketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
-		expect(newBalance > balance).to.equal(true);
-		expect(marketBalance).to.equal(parseFloat(ethers.utils.formatEther(listingFee) * (await market.numberOfListedItems())));
-	});
 
-	it('leave fees for unsold items', async () => {
-		await expectRevert(market.connect(admin).withdrawAll(), 'leave fees for unsold items');
+		await market.connect(admin).withdrawAll();
+
+		const newBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(admin.address)));
+		const newMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
+
+		expect(newBalance - initialBalance).to.equal(marketBalance);
+		expect(newMarketBalance).to.equal(0);
 	});
 
 	it('cannot withdraw if not admin', async () => {
-		await expectRevert(market.withdrawAll(), 'not admin');
+		await expectRevert(market.connect(fourth).withdrawAll(), 'not admin');
 	});
 };
 
