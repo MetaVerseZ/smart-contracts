@@ -33,7 +33,7 @@ const test = () => {
 
 				await market.listERC1155(item.address, id, price, amount);
 
-				const listing = await market.getERC1155Listing(id);
+				const listing = await market.getERC1155Listing(item.address, id);
 
 				expect(listing.sellers).to.include(main.address);
 
@@ -49,19 +49,19 @@ const test = () => {
 	it('buy item', async () => {
 		const initialMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
 
-		const listing = await market.getERC1155Listing(0);
+		const listing = await market.getERC1155Listing(item.address, 0);
 		const amounts = listing.amounts.reduce((acc, b) => (acc += parseInt(ethers.utils.formatUnits(b, 0))), 0);
 
 		await token.connect(buyer).approve(market.address, ethers.utils.parseEther('' + parseFloat(ethers.utils.formatEther(listing.price)) * amount));
 		await market.connect(buyer).buyERC1155(item.address, listing.id, amount);
-		const updatedListing = await market.getERC1155Listing(listing.id);
+		const updatedListing = await market.getERC1155Listing(item.address, listing.id);
 		const updatedamounts = updatedListing.amounts.reduce((acc, b) => (acc += parseInt(ethers.utils.formatUnits(b, 0))), 0);
 
 		expect(amounts - updatedamounts).to.equal(amount);
 		expect(ethers.utils.formatUnits(await item.balanceOf(buyer.address, listing.id), 0)).to.equal(amount.toString());
 
 		const updatedMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
-		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * amount * (parseFloat(ethers.utils.formatUnits(await market._listingFeePermille(), 0)) / 1000)).to.be.below(0.00005);
+		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * amount * (parseFloat(ethers.utils.formatUnits(await market._lisFee(), 0)) / 1000)).to.be.below(0.00005);
 	});
 
 	it('list item again after buying', async () => {
@@ -70,7 +70,7 @@ const test = () => {
 			await item.connect(buyer).setApprovalForAll(market.address, true);
 		}
 		await market.connect(buyer).listERC1155(item.address, 0, testItemPrice, amount - 2);
-		const listing = await market.getERC1155Listing(0);
+		const listing = await market.getERC1155Listing(item.address, 0);
 		expect(listing.sellers).to.include(buyer.address);
 
 		const index = listing.sellers.indexOf(buyer.address);
@@ -92,13 +92,13 @@ const test = () => {
 
 		await market.connect(third).listERC1155(item.address, id, testItemPrice, amount + 10);
 
-		const listing = await market.getERC1155Listing(id);
+		const listing = await market.getERC1155Listing(item.address, id);
 		expect(listing.sellers).to.include(third.address);
 
 		await market.connect(third).cancelERC1155(item.address, id);
-		const updatedListing = await market.getERC1155Listing(id);
+		const updatedListing = await market.getERC1155Listing(item.address, id);
 		expect(updatedListing.sellers.length).to.equal(0);
-		expect(updatedListing._contract).to.equal(ZERO_ADDRESS);
+		expect(updatedListing.amounts.length).to.equal(0);
 		expect(parseInt(ethers.utils.formatUnits(await item.balanceOf(third.address, id), 0))).to.equal(amount + 10);
 	});
 
@@ -126,7 +126,7 @@ const test = () => {
 		await Promise.all(
 			listings.map(async id => {
 				await market.cancelERC1155(item.address, id);
-				const listing = await market.getERC1155Listing(id);
+				const listing = await market.getERC1155Listing(item.address, id);
 				expect(listing.sellers.length).to.equal(0);
 			})
 		);
@@ -138,7 +138,7 @@ const test = () => {
 		await Promise.all(
 			listings.map(async id => {
 				await market.listERC1155(item.address, id, ethers.utils.parseEther('100'), 10);
-				const listing = await market.getERC1155Listing(id);
+				const listing = await market.getERC1155Listing(item.address, id);
 				expect(listing.sellers).to.include(main.address);
 			})
 		);

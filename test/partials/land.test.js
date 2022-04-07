@@ -45,7 +45,7 @@ const test = () => {
 		expect(await land.ownerOf(listing.id)).to.equal(buyer.address);
 
 		const updatedMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
-		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * (parseFloat(ethers.utils.formatUnits(await market._listingFeePermille(), 0)) / 1000)).to.be.below(0.00005);
+		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * (parseFloat(ethers.utils.formatUnits(await market._lisFee(), 0)) / 1000)).to.be.below(0.00005);
 
 		const newListings = await market.landListings();
 		expect(newListings.length).to.equal(listings.length - 1);
