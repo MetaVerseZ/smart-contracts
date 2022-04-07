@@ -17,13 +17,8 @@ contract Item is ERC1155 {
 		_admins = [msg.sender];
 	}
 
-	function setMarket(address market) public {
-		require(isAdmin(msg.sender), 'not admin');
-		_market = market;
-		setApprovalForAll(_market, true);
-	}
-
 	function mint(string memory uri, uint256 amount) public {
+		require(isAdmin(msg.sender), 'only admin');
 		require(_market != address(0), 'market undefined');
 		_mint(msg.sender, _tokenId, amount, '');
 		_setTokenURI(_tokenId, uri);
@@ -41,18 +36,22 @@ contract Item is ERC1155 {
 	}
 
 	function isAdmin(address account) public view returns (bool) {
-		bool admin = false;
 		for (uint256 i = 0; i < _admins.length; i++) {
 			if (_admins[i] == account) {
-				admin = true;
-				break;
+				return true;
 			}
 		}
-		return admin;
+		return false;
 	}
 
 	function setAdmins(address[] memory admins) public {
 		require(isAdmin(msg.sender), 'admin only');
 		_admins = admins;
+	}
+
+	function setMarket(address market) public {
+		require(isAdmin(msg.sender), 'not admin');
+		_market = market;
+		setApprovalForAll(_market, true);
 	}
 }

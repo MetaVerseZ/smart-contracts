@@ -41,29 +41,27 @@ contract Land is ERC721 {
 		super._burn(tokenId);
 	}
 
-	function setMarket(address _marketAddress) public {
-		require(isAdmin(msg.sender), 'not admin');
-		_market = _marketAddress;
-		setApprovalForAll(_market, true);
-	}
-
 	function _baseURI() internal pure override returns (string memory) {
 		return 'ipfs://';
 	}
 
 	function isAdmin(address account) public view returns (bool) {
-		bool admin = false;
 		for (uint256 i = 0; i < _admins.length; i++) {
 			if (_admins[i] == account) {
-				admin = true;
-				break;
+				return true;
 			}
 		}
-		return admin;
+		return false;
 	}
 
 	function setAdmins(address[] memory admins) public {
 		require(isAdmin(msg.sender), 'admin only');
 		_admins = admins;
+	}
+
+	function setMarket(address _marketAddress) public {
+		require(isAdmin(msg.sender), 'not admin');
+		_market = _marketAddress;
+		setApprovalForAll(_market, true);
 	}
 }

@@ -3,11 +3,9 @@ describe('Main Tests', () => {
 
 	describe('Token', require('./partials/token.test'));
 
-	describe('Land', require('./partials/land.test')());
+	describe('Item', require('./partials/item.test'));
 
-	describe('Item', require('./partials/item.test')());
-
-	describe('Transactions', require('./partials/transactions.test'));
+	describe('Land', require('./partials/land.test'));
 
 	describe('Withdraw', require('./partials/withdraw.test'));
 

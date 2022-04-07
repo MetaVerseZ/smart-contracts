@@ -14,6 +14,7 @@ const test = () => {
 		admin = signers[9];
 		item = await Item.deploy();
 		await item.deployed();
+		await item.setAdmins([main.address, admin.address]);
 	});
 
 	it('deploy land contract', async () => {
