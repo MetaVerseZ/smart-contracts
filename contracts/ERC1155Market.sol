@@ -55,9 +55,9 @@ contract ERC1155Market is ERC1155Holder, Market {
 			}
 		}
 
-		_item.safeTransferFrom(msg.sender, address(this), id, amount, '');
-
 		if (id >= _max[addr]) _max[addr] = id + 1;
+
+		_item.safeTransferFrom(msg.sender, address(this), id, amount, '');
 
 		emit Listed(addr, id, msg.sender, amount, price);
 	}
@@ -73,8 +73,6 @@ contract ERC1155Market is ERC1155Holder, Market {
 		require(!isSeller(addr, id, msg.sender), 'seller cannot be buyer');
 		require(_item.balanceOf(address(this), id) > 0, 'listing is not active');
 		require(_item.balanceOf(address(this), id) > amount, 'above available amount');
-
-		_mzt.transferFrom(msg.sender, address(this), _lis[addr][id].price * amount);
 
 		address[] memory buyingFrom = new address[](_lis[addr][id].sellers.length);
 		uint256[] memory buyingAmounts = new uint256[](_lis[addr][id].sellers.length);
@@ -117,17 +115,22 @@ contract ERC1155Market is ERC1155Holder, Market {
 
 		uint256 userAm = _lis[addr][id].price - ((_lis[addr][id].price * ((_lisFee * 1 ether) / 1000)) / 1 ether);
 
-		for (uint256 i = 0; i < bought; i++) {
-			_mzt.transfer(_lis[addr][id].sellers[i], userAm * buyingAmounts[i]);
-		}
-
-		_item.safeTransferFrom(address(this), msg.sender, id, amount, '');
-
-		emit Sold(addr, id, msg.sender, amount, _lis[addr][id].price);
+		address[] memory sellers = _lis[addr][id].sellers;
+		uint256 price = _lis[addr][id].price;
 
 		if (_item.balanceOf(address(this), id) == 0) {
 			delete _lis[addr][id];
 		}
+
+		_mzt.transferFrom(msg.sender, address(this), price * amount);
+
+		for (uint256 i = 0; i < bought; i++) {
+			_mzt.transfer(sellers[i], userAm * buyingAmounts[i]);
+		}
+
+		_item.safeTransferFrom(address(this), msg.sender, id, amount, '');
+
+		emit Sold(addr, id, msg.sender, amount, price);
 	}
 
 	function unlist(address addr, uint256 id) public {
@@ -138,8 +141,8 @@ contract ERC1155Market is ERC1155Holder, Market {
 		require(_item.balanceOf(address(this), id) > 0, 'listing is not active');
 
 		uint256 index = sellerIdx(addr, id, msg.sender);
-
-		_item.safeTransferFrom(address(this), _lis[addr][id].sellers[index], id, _lis[addr][id].amounts[index], '');
+		address seller = _lis[addr][id].sellers[sellerIdx(addr, id, msg.sender)];
+		uint256 amount = _lis[addr][id].amounts[index];
 
 		for (uint256 i = index; i < _lis[addr][id].sellers.length - 1; i++) {
 			_lis[addr][id].amounts[i] = _lis[addr][id].amounts[i + 1];
@@ -149,11 +152,13 @@ contract ERC1155Market is ERC1155Holder, Market {
 		_lis[addr][id].amounts.pop();
 		_lis[addr][id].sellers.pop();
 
-		emit Unlisted(addr, id, msg.sender);
-
 		if (_item.balanceOf(address(this), id) == 0) {
 			delete _lis[addr][id];
 		}
+
+		_item.safeTransferFrom(address(this), seller, id, amount, '');
+
+		emit Unlisted(addr, id, msg.sender);
 	}
 
 	function listing(address addr, uint256 id) public view returns (Listing memory) {

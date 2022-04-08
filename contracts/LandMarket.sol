@@ -37,9 +37,9 @@ contract LandMarket is ERC721Holder, Market {
 
 		_lis[id] = Listing(id, price, msg.sender);
 
-		_land.safeTransferFrom(msg.sender, address(this), id);
-
 		if (id >= _max) _max = id + 1;
+
+		_land.safeTransferFrom(msg.sender, address(this), id);
 
 		emit Listed(address(_land), id, msg.sender, 1, price);
 	}
@@ -50,23 +50,26 @@ contract LandMarket is ERC721Holder, Market {
 
 		uint256 userAm = _lis[id].price - ((_lis[id].price * ((_lisFee * 1 ether) / 1000)) / 1 ether);
 
-		_mzt.transferFrom(msg.sender, address(this), _lis[id].price);
-		_mzt.transfer(_lis[id].seller, userAm);
-
-		_land.safeTransferFrom(address(this), msg.sender, id);
+		address seller = _lis[id].seller;
+		uint256 price = _lis[id].price;
 
 		delete _lis[id];
 
-		emit Sold(address(_land), id, msg.sender, 1, _lis[id].price);
+		_mzt.transferFrom(msg.sender, address(this), price);
+		_mzt.transfer(seller, userAm);
+
+		_land.safeTransferFrom(address(this), msg.sender, id);
+
+		emit Sold(address(_land), id, msg.sender, 1, price);
 	}
 
 	function unlist(uint256 id) public {
 		require(_lis[id].seller != address(0), 'listing is not active');
 		require(msg.sender == _lis[id].seller, 'only seller can cancel listing');
 
-		_land.safeTransferFrom(address(this), msg.sender, id);
-
 		delete _lis[id];
+
+		_land.safeTransferFrom(address(this), msg.sender, id);
 
 		emit Unlisted(address(_land), id, msg.sender);
 	}
