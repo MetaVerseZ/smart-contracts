@@ -31,9 +31,9 @@ const test = () => {
 				await item.mint(id.toString(), amount);
 				expect(await item.tokenURI(id)).to.equal(id.toString());
 
-				await market.listERC1155(item.address, id, price, amount);
+				await erc1155market.list(item.address, id, price, amount);
 
-				const listing = await market.getERC1155Listing(item.address, id);
+				const listing = await erc1155market.listing(item.address, id);
 
 				expect(listing.sellers).to.include(main.address);
 
@@ -42,40 +42,40 @@ const test = () => {
 			})
 		);
 
-		const listings = await market.listingsERC1155(item.address);
+		const listings = await erc1155market.listings(item.address);
 		expect(listings.length).to.equal(length);
 	});
 
 	it('buy item', async () => {
-		const initialMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
+		const initialMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(erc1155market.address)));
 
-		const listing = await market.getERC1155Listing(item.address, 0);
+		const listing = await erc1155market.listing(item.address, 0);
 		const amounts = listing.amounts.reduce((acc, b) => (acc += parseInt(ethers.utils.formatUnits(b, 0))), 0);
 
-		await token.connect(buyer).approve(market.address, ethers.utils.parseEther('' + parseFloat(ethers.utils.formatEther(listing.price)) * amount));
-		await market.connect(buyer).buyERC1155(item.address, listing.id, amount);
-		const updatedListing = await market.getERC1155Listing(item.address, listing.id);
+		await token.connect(buyer).approve(erc1155market.address, ethers.utils.parseEther('' + parseFloat(ethers.utils.formatEther(listing.price)) * amount));
+		await erc1155market.connect(buyer).buy(item.address, listing.id, amount);
+		const updatedListing = await erc1155market.listing(item.address, listing.id);
 		const updatedamounts = updatedListing.amounts.reduce((acc, b) => (acc += parseInt(ethers.utils.formatUnits(b, 0))), 0);
 
 		expect(amounts - updatedamounts).to.equal(amount);
 		expect(ethers.utils.formatUnits(await item.balanceOf(buyer.address, listing.id), 0)).to.equal(amount.toString());
 
-		const updatedMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
-		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * amount * (parseFloat(ethers.utils.formatUnits(await market._lisFee(), 0)) / 1000)).to.be.below(0.00005);
+		const updatedMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(erc1155market.address)));
+		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * amount * (parseFloat(ethers.utils.formatUnits(await erc1155market._lisFee(), 0)) / 1000)).to.be.below(0.00005);
 	});
 
 	it('list item again after buying', async () => {
-		const approved = await item.isApprovedForAll(buyer.address, market.address);
+		const approved = await item.isApprovedForAll(buyer.address, erc1155market.address);
 		if (!approved) {
-			await item.connect(buyer).setApprovalForAll(market.address, true);
+			await item.connect(buyer).setApprovalForAll(erc1155market.address, true);
 		}
-		await market.connect(buyer).listERC1155(item.address, 0, testItemPrice, amount - 2);
-		const listing = await market.getERC1155Listing(item.address, 0);
+		await erc1155market.connect(buyer).list(item.address, 0, testItemPrice, amount - 2);
+		const listing = await erc1155market.listing(item.address, 0);
 		expect(listing.sellers).to.include(buyer.address);
 
 		const index = listing.sellers.indexOf(buyer.address);
 		expect(parseInt(ethers.utils.formatUnits(listing.amounts[index], 0))).to.equal(amount - 2);
-		const listings = await market.listingsERC1155(item.address);
+		const listings = await erc1155market.listings(item.address);
 		expect(listings.length).to.equal(length);
 	});
 
@@ -85,18 +85,18 @@ const test = () => {
 		await item.connect(admin).mint('any', amount + 10);
 		await item.connect(admin).safeTransferFrom(admin.address, third.address, id, amount + 10, ZERO_BYTES32);
 
-		const approved = await item.isApprovedForAll(third.address, market.address);
+		const approved = await item.isApprovedForAll(third.address, erc1155market.address);
 		if (!approved) {
-			await item.connect(third).setApprovalForAll(market.address, true);
+			await item.connect(third).setApprovalForAll(erc1155market.address, true);
 		}
 
-		await market.connect(third).listERC1155(item.address, id, testItemPrice, amount + 10);
+		await erc1155market.connect(third).list(item.address, id, testItemPrice, amount + 10);
 
-		const listing = await market.getERC1155Listing(item.address, id);
+		const listing = await erc1155market.listing(item.address, id);
 		expect(listing.sellers).to.include(third.address);
 
-		await market.connect(third).cancelERC1155(item.address, id);
-		const updatedListing = await market.getERC1155Listing(item.address, id);
+		await erc1155market.connect(third).unlist(item.address, id);
+		const updatedListing = await erc1155market.listing(item.address, id);
 		expect(updatedListing.sellers.length).to.equal(0);
 		expect(updatedListing.amounts.length).to.equal(0);
 		expect(parseInt(ethers.utils.formatUnits(await item.balanceOf(third.address, id), 0))).to.equal(amount + 10);
@@ -105,19 +105,19 @@ const test = () => {
 	it('cannot list an item owned by someone else', async () => {
 		await item.connect(admin).mint('any', 1);
 
-		await expectRevert(market.listERC1155(item.address, parseInt(ethers.utils.formatUnits(await item._tokenId(), 0)) - 1, testItemPrice, 1), 'listing can be done only by owner');
+		await expectRevert(erc1155market.list(item.address, parseInt(ethers.utils.formatUnits(await item._tokenId(), 0)) - 1, testItemPrice, 1), 'listing can be done only by owner');
 	});
 
 	it('cannot cancel an item owned by someone else', async () => {
-		await expectRevert(market.connect(third).cancelERC1155(item.address, 0), 'only seller can cancel listing');
+		await expectRevert(erc1155market.connect(third).unlist(item.address, 0), 'only seller can cancel listing');
 	});
 
 	it('cannot buy an owned item', async () => {
-		await expectRevert(market.buyERC1155(item.address, 1, 1), 'seller cannot be buyer');
+		await expectRevert(erc1155market.buy(item.address, 1, 1), 'seller cannot be buyer');
 	});
 
 	it('number of listings', async () => {
-		expect((await market.listingsERC1155(item.address)).length).to.equal(10);
+		expect((await erc1155market.listings(item.address)).length).to.equal(10);
 	});
 
 	it('unlist items', async () => {
@@ -125,8 +125,8 @@ const test = () => {
 
 		await Promise.all(
 			listings.map(async id => {
-				await market.cancelERC1155(item.address, id);
-				const listing = await market.getERC1155Listing(item.address, id);
+				await erc1155market.unlist(item.address, id);
+				const listing = await erc1155market.listing(item.address, id);
 				expect(listing.sellers.length).to.equal(0);
 			})
 		);
@@ -137,15 +137,15 @@ const test = () => {
 
 		await Promise.all(
 			listings.map(async id => {
-				await market.listERC1155(item.address, id, ethers.utils.parseEther('100'), 10);
-				const listing = await market.getERC1155Listing(item.address, id);
+				await erc1155market.list(item.address, id, ethers.utils.parseEther('100'), 10);
+				const listing = await erc1155market.listing(item.address, id);
 				expect(listing.sellers).to.include(main.address);
 			})
 		);
 	});
 
 	it('cannot list an item that is not minted/owned', async () => {
-		expectRevert(market.listERC1155(item.address, 22, ethers.utils.parseUnits('5000', 'ether'), 10), 'listing can be done only by owner');
+		expectRevert(erc1155market.list(item.address, 22, ethers.utils.parseUnits('5000', 'ether'), 10), 'listing can be done only by owner');
 	});
 };
 

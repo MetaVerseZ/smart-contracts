@@ -24,13 +24,21 @@ const test = () => {
 		await land.setAdmins([main.address, admin.address]);
 	});
 
-	it('deploy market contract', async () => {
-		const Market = await ethers.getContractFactory('Market');
-		market = await Market.deploy(token.address, 10, item.address, land.address);
-		await market.deployed();
-		await item.setMarket(market.address);
-		await land.setMarket(market.address);
-		await market.setAdmins([main.address, admin.address]);
+	it('deploy market contracts', async () => {
+		const ERC1155Market = await ethers.getContractFactory('ERC1155Market');
+		const LandMarket = await ethers.getContractFactory('LandMarket');
+
+		erc1155market = await ERC1155Market.deploy(token.address, 10, item.address);
+		landmarket = await LandMarket.deploy(token.address, 10, land.address);
+
+		await erc1155market.deployed();
+		await landmarket.deployed();
+
+		await erc1155market.setAdmins([main.address, admin.address]);
+		await landmarket.setAdmins([main.address, admin.address]);
+
+		await item.setMarket(erc1155market.address);
+		await land.setMarket(landmarket.address);
 	});
 };
 

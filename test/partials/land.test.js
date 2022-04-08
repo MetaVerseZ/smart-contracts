@@ -19,7 +19,7 @@ const test = () => {
 						expect(coordinates.minted).to.equal(true);
 						expect(parseInt(ethers.utils.formatUnits(coordinates.id, 0))).to.equal(x * length + y);
 
-						await market.connect(admin).listLand(coordinates.id, ethers.utils.parseEther((Math.ceil(Math.random() * 100) + 100).toString()));
+						await landmarket.connect(admin).list(coordinates.id, ethers.utils.parseEther((Math.ceil(Math.random() * 100) + 100).toString()));
 
 						expectRevert(land.mint(x, y), 'land already minted');
 					})
@@ -32,38 +32,38 @@ const test = () => {
 	});
 
 	it('buy land', async () => {
-		const initialMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
+		const initialMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(landmarket.address)));
 
-		const listing = await market.getLandListing(0);
-		const listings = await market.landListings();
+		const listing = await landmarket.listing(0);
+		const listings = await landmarket.listings();
 
-		await token.connect(buyer).approve(market.address, listing.price);
-		await market.connect(buyer).buyLand(listing.id);
-		const updatedListing = await market.getLandListing(listing.id);
+		await token.connect(buyer).approve(landmarket.address, listing.price);
+		await landmarket.connect(buyer).buy(listing.id);
+		const updatedListing = await landmarket.listing(listing.id);
 
 		expect(updatedListing.seller).to.equal(ZERO_ADDRESS);
 		expect(await land.ownerOf(listing.id)).to.equal(buyer.address);
 
-		const updatedMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(market.address)));
-		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * (parseFloat(ethers.utils.formatUnits(await market._lisFee(), 0)) / 1000)).to.be.below(0.00005);
+		const updatedMarketBalance = parseFloat(ethers.utils.formatEther(await token.balanceOf(landmarket.address)));
+		expect(updatedMarketBalance - initialMarketBalance - parseFloat(ethers.utils.formatEther(listing.price)) * (parseFloat(ethers.utils.formatUnits(await landmarket._lisFee(), 0)) / 1000)).to.be.below(0.00005);
 
-		const newListings = await market.landListings();
+		const newListings = await landmarket.listings();
 		expect(newListings.length).to.equal(listings.length - 1);
 	});
 
 	it('list land again after buying', async () => {
-		const listings = await market.landListings();
+		const listings = await landmarket.listings();
 
-		const approved = await land.isApprovedForAll(buyer.address, market.address);
+		const approved = await land.isApprovedForAll(buyer.address, landmarket.address);
 		if (!approved) {
-			await land.connect(buyer).setApprovalForAll(market.address, true);
+			await land.connect(buyer).setApprovalForAll(landmarket.address, true);
 		}
 
-		await market.connect(buyer).listLand(0, testItemPrice);
-		const listing = await market.getLandListing(0);
+		await landmarket.connect(buyer).list(0, testItemPrice);
+		const listing = await landmarket.listing(0);
 		expect(listing.seller).to.equal(buyer.address);
 
-		const newListings = await market.landListings();
+		const newListings = await landmarket.listings();
 		expect(newListings.length).to.equal(listings.length + 1);
 	});
 
@@ -73,33 +73,33 @@ const test = () => {
 		await land.connect(admin).mint(255, 255);
 		await land.connect(admin)['safeTransferFrom(address,address,uint256)'](admin.address, third.address, id);
 
-		const approved = await land.isApprovedForAll(third.address, market.address);
+		const approved = await land.isApprovedForAll(third.address, landmarket.address);
 		if (!approved) {
-			await land.connect(third).setApprovalForAll(market.address, true);
+			await land.connect(third).setApprovalForAll(landmarket.address, true);
 		}
 
-		await market.connect(third).listLand(id, testItemPrice);
+		await landmarket.connect(third).list(id, testItemPrice);
 
-		const listing = await market.getLandListing(id);
+		const listing = await landmarket.listing(id);
 		expect(listing.seller).to.equal(third.address);
 
-		await market.connect(third).cancelLand(id);
-		const updatedListing = await market.getLandListing(id);
+		await landmarket.connect(third).unlist(id);
+		const updatedListing = await landmarket.listing(id);
 
 		expect(updatedListing.seller).to.equal(ZERO_ADDRESS);
 		expect(await land.ownerOf(id)).to.equal(third.address);
 	});
 
 	it('cannot list land owned by someone else', async () => {
-		await expectRevert(market.listLand(4, testItemPrice), 'listing can be done only by owner');
+		await expectRevert(landmarket.list(4, testItemPrice), 'listing can be done only by owner');
 	});
 
 	it('cannot cancel a land owned by someone else', async () => {
-		await expectRevert(market.connect(third).cancelLand(1), 'only seller can cancel listing');
+		await expectRevert(landmarket.connect(third).unlist(1), 'only seller can cancel listing');
 	});
 
 	it('cannot buy an owned land', async () => {
-		await expectRevert(market.connect(admin).buyLand(1), 'seller cannot be buyer');
+		await expectRevert(landmarket.connect(admin).buy(1), 'seller cannot be buyer');
 	});
 };
 

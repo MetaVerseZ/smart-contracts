@@ -11,8 +11,9 @@ describe('Main Tests', () => {
 
 	after(() => {
 		console.log('\n\tToken address:', token.address);
-		console.log('\tMarket address:', market.address);
 		console.log('\tLand address:', land.address);
 		console.log('\tItem address:', item.address);
+		console.log('\tERC1155Market address:', erc1155market.address);
+		console.log('\tLandMarket address:', landmarket.address);
 	});
 });
