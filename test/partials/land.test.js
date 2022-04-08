@@ -3,8 +3,10 @@ const { expect } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants');
 
+const random = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
+
 const test = () => {
-	const length = 7;
+	const length = random(5, 10);
 	const testItemPrice = ethers.utils.parseUnits('100', 'ether');
 
 	it('mint and list land', async () => {

@@ -1,11 +1,13 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { expectRevert } = require('@openzeppelin/test-helpers');
-const { ZERO_ADDRESS, ZERO_BYTES32 } = require('@openzeppelin/test-helpers/src/constants');
+const { ZERO_BYTES32 } = require('@openzeppelin/test-helpers/src/constants');
 // const { create, urlSource } = require('ipfs-http-client');
 
+const random = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
+
 const test = () => {
-	const length = 10;
+	const length = random(5, 10);
 	const amount = 12;
 	const testItemPrice = ethers.utils.parseUnits('500', 'ether');
 
@@ -117,7 +119,7 @@ const test = () => {
 	});
 
 	it('number of listings', async () => {
-		expect((await erc1155market.listings(item.address)).length).to.equal(10);
+		expect((await erc1155market.listings(item.address)).length).to.equal(length);
 	});
 
 	it('unlist items', async () => {
