@@ -13,26 +13,21 @@ contract Item is ERC1155 {
 
 	event Minted(address owner, uint256 tokenId, uint256 amount);
 
-	constructor() ERC1155('Meta Z Item') {
+	constructor(string memory _uri) ERC1155(_uri) {
 		_admins = [msg.sender];
 	}
 
-	function mint(string memory uri, uint256 amount) public {
+	function mint(uint256 amount) public {
 		require(isAdmin(msg.sender), 'only admin');
 		require(_market != address(0), 'market undefined');
+		require(amount > 0);
+
 		_mint(msg.sender, _tokenId, amount, '');
-		_setTokenURI(_tokenId, uri);
 		setApprovalForAll(_market, true);
-		emit Minted(msg.sender, _tokenId, amount);
+
 		_tokenId++;
-	}
 
-	function tokenURI(uint256 tokenId) public view returns (string memory) {
-		return _tokenURIs[tokenId];
-	}
-
-	function _setTokenURI(uint256 tokenId, string memory uri) private {
-		_tokenURIs[tokenId] = uri;
+		emit Minted(msg.sender, _tokenId, amount);
 	}
 
 	function isAdmin(address account) public view returns (bool) {
