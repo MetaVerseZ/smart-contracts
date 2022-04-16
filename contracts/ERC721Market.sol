@@ -24,7 +24,7 @@ contract ERC721Market is ERC721Holder, Market {
 		_mzt = ERC20(mzt);
 		_adm = [msg.sender];
 		_lisFee = fee;
-		_acceptdTokens = [item];
+		_acceptedItems = [item];
 	}
 
 	function list(
@@ -32,7 +32,7 @@ contract ERC721Market is ERC721Holder, Market {
 		uint256 id,
 		uint256 price
 	) public {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 		CustomItem _item = CustomItem(addr);
 
 		require(id < _item._tokenId(), 'land not minted');
@@ -49,7 +49,7 @@ contract ERC721Market is ERC721Holder, Market {
 	}
 
 	function buy(address addr, uint256 id) public {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 		CustomItem _item = CustomItem(addr);
 
 		require(_lis[addr][id].seller != address(0), 'listing is not active');
@@ -71,7 +71,7 @@ contract ERC721Market is ERC721Holder, Market {
 	}
 
 	function unlist(address addr, uint256 id) public {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 		CustomItem _item = CustomItem(addr);
 
 		require(_lis[addr][id].seller != address(0), 'listing is not active');
@@ -89,7 +89,7 @@ contract ERC721Market is ERC721Holder, Market {
 	}
 
 	function listings(address addr) public view returns (Listing[] memory) {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 
 		uint256 n = 0;
 		for (uint256 i = 0; i < _max[addr]; i++) {

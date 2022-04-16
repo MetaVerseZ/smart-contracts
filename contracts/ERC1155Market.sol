@@ -25,7 +25,7 @@ contract ERC1155Market is ERC1155Holder, Market {
 		_mzt = ERC20(mzt);
 		_adm = [msg.sender];
 		_lisFee = fee;
-		_acceptdTokens = [item];
+		_acceptedItems = [item];
 	}
 
 	function list(
@@ -34,7 +34,7 @@ contract ERC1155Market is ERC1155Holder, Market {
 		uint256 price,
 		uint256 amount
 	) public {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 		Item _item = Item(addr);
 
 		require(_item.balanceOf(msg.sender, id) >= amount, 'listing can be done only by owner');
@@ -67,7 +67,7 @@ contract ERC1155Market is ERC1155Holder, Market {
 		uint256 id,
 		uint256 amount
 	) public {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 		Item _item = Item(addr);
 
 		require(!isSeller(addr, id, msg.sender), 'seller cannot be buyer');
@@ -134,7 +134,7 @@ contract ERC1155Market is ERC1155Holder, Market {
 	}
 
 	function unlist(address addr, uint256 id) public {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 		Item _item = Item(addr);
 
 		require(isSeller(addr, id, msg.sender), 'only seller can cancel listing');
@@ -166,7 +166,7 @@ contract ERC1155Market is ERC1155Holder, Market {
 	}
 
 	function listings(address addr) public view returns (Listing[] memory) {
-		require(tokenAccepted(addr), 'token not accepted');
+		require(itemAccepted(addr), 'item not accepted');
 
 		uint256 n = 0;
 		for (uint256 i = 0; i < _max[addr]; i++) {

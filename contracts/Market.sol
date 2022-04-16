@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 contract Market {
 	ERC20 public _mzt;
-	address[] public _acceptdTokens;
+	address[] public _acceptedItems;
 	address[] public _adm;
 	uint16 public _lisFee;
 
@@ -42,15 +42,15 @@ contract Market {
 		_adm = admins;
 	}
 
-	function tokenAccepted(address token) public view returns (bool) {
-		for (uint256 i = 0; i < _acceptdTokens.length; i++) {
-			if (_acceptdTokens[i] == token) return true;
+	function itemAccepted(address token) public view returns (bool) {
+		for (uint256 i = 0; i < _acceptedItems.length; i++) {
+			if (_acceptedItems[i] == token) return true;
 		}
 		return false;
 	}
 
 	function setAcceptedTokens(address[] memory tokens) public {
 		require(isAdmin(msg.sender), 'admin only');
-		_acceptdTokens = tokens;
+		_acceptedItems = tokens;
 	}
 }

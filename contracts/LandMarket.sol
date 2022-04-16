@@ -26,7 +26,6 @@ contract LandMarket is ERC721Holder, Market {
 		_mzt = ERC20(mzt);
 		_adm = [msg.sender];
 		_lisFee = fee;
-		_acceptdTokens = [land];
 		_land = Land(land);
 	}
 
