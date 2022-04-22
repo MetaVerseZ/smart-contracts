@@ -12,7 +12,7 @@ const test = () => {
 		const signers = await ethers.getSigners();
 		main = signers[0];
 		admin = signers[9];
-		item = await Item.deploy();
+		item = await Item.deploy('uri');
 		await item.deployed();
 		await item.setAdmins([main.address, admin.address]);
 	});
