@@ -16,12 +16,16 @@ const test = () => {
 					Array.from({ length }, (v, k) => k).map(async y => {
 						await land.connect(admin).mint(x, y);
 
-						const coordinates = await land._coordinates(x, y);
+						const item = await land._items(x, y);
 
-						expect(coordinates.minted).to.equal(true);
-						expect(parseInt(ethers.utils.formatUnits(coordinates.id, 0))).to.equal(x * length + y);
+						expect(item.minted).to.equal(true);
+						expect(parseInt(ethers.utils.formatUnits(item.id, 0))).to.equal(x * length + y);
 
-						await landmarket.connect(admin).list(coordinates.id, ethers.utils.parseEther((Math.ceil(Math.random() * 100) + 100).toString()));
+						const coordinates = await land._coordinates(item.id);
+						expect(coordinates.x).to.equal(x);
+						expect(coordinates.y).to.equal(y);
+
+						await landmarket.connect(admin).list(item.id, ethers.utils.parseEther((Math.ceil(Math.random() * 100) + 100).toString()));
 
 						expectRevert(land.mint(x, y), 'land already minted');
 					})
@@ -29,8 +33,8 @@ const test = () => {
 			})
 		);
 
-		expect((await land._coordinates(length + 1, length + 1)).minted).to.equal(false);
-		expect(ethers.utils.formatUnits((await land._coordinates(length + 1, length + 1)).id, 0)).to.equal('0');
+		expect((await land._items(length + 1, length + 1)).minted).to.equal(false);
+		expect(ethers.utils.formatUnits((await land._items(length + 1, length + 1)).id, 0)).to.equal('0');
 	});
 
 	it('buy land', async () => {

@@ -11,7 +11,13 @@ contract Land is ERC721 {
 		uint256 id;
 	}
 
-	mapping(uint8 => mapping(uint8 => Item)) public _coordinates;
+	struct Coordinates {
+		uint8 x;
+		uint8 y;
+	}
+
+	mapping(uint8 => mapping(uint8 => Item)) public _items;
+	mapping(uint256 => Coordinates) public _coordinates;
 
 	address public _market = address(0);
 	address[] public _admins;
@@ -25,12 +31,13 @@ contract Land is ERC721 {
 	function mint(uint8 x, uint8 y) public {
 		require(isAdmin(msg.sender), 'only admin');
 		require(_market != address(0), 'market undefined');
-		require(!_coordinates[x][y].minted, 'land already minted');
+		require(!_items[x][y].minted, 'land already minted');
 
 		_safeMint(msg.sender, _tokenId);
 		setApprovalForAll(_market, true);
 
-		_coordinates[x][y] = Item(true, _tokenId);
+		_items[x][y] = Item(true, _tokenId);
+		_coordinates[_tokenId] = Coordinates(x, y);
 		_tokenId++;
 
 		emit Minted(msg.sender, _tokenId - 1, x, y);
@@ -39,10 +46,6 @@ contract Land is ERC721 {
 	function burn(uint256 tokenId) public {
 		require(ERC721.ownerOf(tokenId) == msg.sender, 'only owner can burn');
 		super._burn(tokenId);
-	}
-
-	function _baseURI() internal pure override returns (string memory) {
-		return 'ipfs://';
 	}
 
 	function isAdmin(address account) public view returns (bool) {
