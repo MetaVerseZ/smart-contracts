@@ -30,8 +30,7 @@ const test = () => {
 				const amount = Math.ceil(Math.random() * 100) + 20;
 				const price = ethers.utils.parseEther((Math.ceil(Math.random() * 1000) + 20).toString());
 
-				await item.mint(id.toString(), amount);
-				expect(await item.tokenURI(id)).to.equal(id.toString());
+				await item.mint(amount);
 
 				await erc1155market.list(item.address, id, price, amount);
 
@@ -84,7 +83,7 @@ const test = () => {
 	it('cancel item listing', async () => {
 		const id = parseInt(ethers.utils.formatUnits(await item._tokenId(), 0));
 
-		await item.connect(admin).mint('any', amount + 10);
+		await item.connect(admin).mint(amount + 10);
 		await item.connect(admin).safeTransferFrom(admin.address, third.address, id, amount + 10, ZERO_BYTES32);
 
 		const approved = await item.isApprovedForAll(third.address, erc1155market.address);
@@ -105,7 +104,7 @@ const test = () => {
 	});
 
 	it('cannot list an item owned by someone else', async () => {
-		await item.connect(admin).mint('any', 1);
+		await item.connect(admin).mint(1);
 
 		await expectRevert(erc1155market.list(item.address, parseInt(ethers.utils.formatUnits(await item._tokenId(), 0)) - 1, testItemPrice, 1), 'listing can be done only by owner');
 	});
