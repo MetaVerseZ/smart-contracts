@@ -9,8 +9,8 @@ contract LandPresale is ERC721Holder {
 	address payable public _admin;
 	uint256 public _price = 5 * 1e17;
 
-	constructor(address land, address admin) {
-		_admin = payable(admin);
+	constructor(address land) {
+		_admin = payable(msg.sender);
 		_land = Land(land);
 	}
 
@@ -30,5 +30,9 @@ contract LandPresale is ERC721Holder {
 	function withdraw(uint256 id) public {
 		require(msg.sender == _admin, 'not admin');
 		_land.safeTransferFrom(address(this), _admin, id);
+	}
+
+	function setPrice(uint256 price) public {
+		_price = price;
 	}
 }
