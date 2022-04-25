@@ -2,22 +2,24 @@
 pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import 'hardhat/console.sol';
 
 contract Land is ERC721 {
 	uint256 public _tokenId;
+
+	struct Coordinates {
+		address owner;
+		uint8 x;
+		uint8 y;
+	}
 
 	struct Item {
 		bool minted;
 		uint256 id;
 	}
 
-	struct Coordinates {
-		uint8 x;
-		uint8 y;
-	}
-
+	Coordinates[] public _coordinates;
 	mapping(uint8 => mapping(uint8 => Item)) public _items;
-	mapping(uint256 => Coordinates) public _coordinates;
 
 	address public _market = address(0);
 	address[] public _admins;
@@ -37,7 +39,8 @@ contract Land is ERC721 {
 		setApprovalForAll(_market, true);
 
 		_items[x][y] = Item(true, _tokenId);
-		_coordinates[_tokenId] = Coordinates(x, y);
+		_coordinates.push(Coordinates(msg.sender, x, y));
+
 		_tokenId++;
 
 		emit Minted(msg.sender, _tokenId - 1, x, y);
@@ -66,5 +69,25 @@ contract Land is ERC721 {
 		require(isAdmin(msg.sender), 'not admin');
 		_market = _marketAddress;
 		setApprovalForAll(_market, true);
+	}
+
+	function batchMint(
+		uint8 start,
+		uint8 xEnd,
+		uint8 yEnd
+	) public {
+		require(isAdmin(msg.sender), 'only admin');
+		require(start <= xEnd && start <= yEnd, 'start must be lower than end');
+
+		for (uint8 i = start; i <= xEnd; i++) {
+			for (uint8 j = start; j <= yEnd; j++) {
+				mint(i, j);
+				console.log(_tokenId);
+			}
+		}
+	}
+
+	function map() public view returns (Coordinates[] memory) {
+		return _coordinates;
 	}
 }

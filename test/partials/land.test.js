@@ -107,6 +107,42 @@ const test = () => {
 	it('cannot buy an owned land', async () => {
 		await expectRevert(landmarket.connect(admin).buy(1), 'seller cannot be buyer');
 	});
+
+	it('batch mint', async () => {
+		const Land = await ethers.getContractFactory('Land');
+		const land = await Land.deploy();
+		await land.deployed();
+		await land.setMarket(landmarket.address);
+
+		await land.batchMint(0, 2, 3);
+		expectRevert(land.batchMint(0, 2, 2), 'land already minted');
+		expect(ethers.utils.formatUnits(await land._tokenId(), 0)).to.equal('12');
+	});
+
+	it('map', async () => {		
+		const Land = await ethers.getContractFactory('Land');
+		const land = await Land.deploy();
+		await land.deployed();
+		await land.setMarket(landmarket.address);
+
+		const matrixLength = 16;
+		const matrix = Array.from({ length: matrixLength }, () => Array.from({ length: matrixLength }, () => Math.random() > 0.7));
+
+		await Promise.all(matrix.map(async (arr, x) => await Promise.all(arr.map(async (e, y) => e && (await land.mint(x, y))))));
+
+		const map = (await land.map()).map(e => ({ owner: e.owner, x: e.x, y: e.y }));
+		expect(map.length).to.equal([].concat(...matrix).filter(e => e).length);
+
+		const matrixFromMap = Array.from({ length: matrixLength }, () => Array.from({ length: matrixLength }, () => {}));
+
+		map.forEach(e => (matrixFromMap[e.x][e.y] = e.owner));
+
+		matrixFromMap.forEach((array, x) => {
+			array.forEach((item, y) => {
+				expect(!!item).to.equal(matrix[x][y])
+			});
+		});
+	});
 };
 
 module.exports = test;
