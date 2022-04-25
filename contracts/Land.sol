@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
-import 'hardhat/console.sol';
 
 contract Land is ERC721 {
 	uint256 public _tokenId;
@@ -79,10 +78,9 @@ contract Land is ERC721 {
 		require(isAdmin(msg.sender), 'only admin');
 		require(start <= xEnd && start <= yEnd, 'start must be lower than end');
 
-		for (uint8 i = start; i <= xEnd; i++) {
-			for (uint8 j = start; j <= yEnd; j++) {
-				mint(i, j);
-				console.log(_tokenId);
+		for (uint8 x = start; x <= xEnd; x++) {
+			for (uint8 y = start; y <= yEnd; y++) {
+				if (!_items[x][y].minted) mint(x, y);
 			}
 		}
 	}

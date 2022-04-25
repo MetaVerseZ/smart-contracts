@@ -115,7 +115,9 @@ const test = () => {
 		await land.setMarket(landmarket.address);
 
 		await land.batchMint(0, 2, 3);
-		expectRevert(land.batchMint(0, 2, 2), 'land already minted');
+		expect(ethers.utils.formatUnits(await land._tokenId(), 0)).to.equal('12');
+
+		await land.batchMint(0, 2, 2);
 		expect(ethers.utils.formatUnits(await land._tokenId(), 0)).to.equal('12');
 	});
 
