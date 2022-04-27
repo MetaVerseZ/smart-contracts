@@ -3,7 +3,7 @@ pragma solidity ^0.8.9;
 
 import '@openzeppelin/contracts/token/ERC1155/ERC1155.sol';
 
-contract Item is ERC1155 {
+contract ERC1155Item is ERC1155 {
 	uint256 public _tokenId = 0;
 
 	address public _market = address(0);
@@ -19,11 +19,10 @@ contract Item is ERC1155 {
 
 	function mint(uint256 amount) public {
 		require(isAdmin(msg.sender), 'only admin');
-		require(_market != address(0), 'market undefined');
 		require(amount > 0);
 
 		_mint(msg.sender, _tokenId, amount, '');
-		setApprovalForAll(_market, true);
+		if (_market != address(0)) setApprovalForAll(_market, true);
 
 		_tokenId++;
 

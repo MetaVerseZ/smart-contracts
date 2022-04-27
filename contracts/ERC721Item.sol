@@ -1,23 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import './ERC721ItemInterface.sol';
 
-abstract contract CustomItem is ERC721 {
-	uint256 public _tokenId = 0;
+contract Item is ERC721Item {
+	constructor() ERC721('Meta Z Land', 'MZL') {
+		_admins = [msg.sender];
+	}
 
-	address public _market = address(0);
-	address[] public _admins;
+	function mint(string memory uri) public override {
+		require(isAdmin(msg.sender), 'only admin');
 
-	mapping(uint256 => string) private _tokenURIs;
+		_safeMint(msg.sender, _tokenId);
+		_setTokenURI(_tokenId, uri);
+		if (_market != address(0)) setApprovalForAll(_market, true);
 
-	event Minted(address owner, uint256 tokenId, uint256 amount);
+		_tokenId++;
 
-	function mint(string memory uri, uint256 amount) public virtual;
+		emit Minted(msg.sender, _tokenId - 1);
+	}
 
-	function isAdmin(address account) public view virtual returns (bool);
+	function isAdmin(address account) public view override returns (bool) {
+		for (uint256 i = 0; i < _admins.length; i++) {
+			if (_admins[i] == account) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-	function setAdmins(address[] memory admins) public virtual;
+	function setAdmins(address[] memory admins) public override {
+		require(isAdmin(msg.sender), 'admin only');
+		_admins = admins;
+	}
 
-	function setMarket(address market) public virtual;
+	function setMarket(address _marketAddress) public override {
+		require(isAdmin(msg.sender), 'not admin');
+		_market = _marketAddress;
+		setApprovalForAll(_market, true);
+	}
 }

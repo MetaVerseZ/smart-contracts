@@ -33,11 +33,12 @@ contract ERC721Market is ERC721Holder, Market {
 		uint256 price
 	) public {
 		require(itemAccepted(addr), 'item not accepted');
-		CustomItem _item = CustomItem(addr);
+		ERC721Item _item = ERC721Item(addr);
 
 		require(id < _item._tokenId(), 'land not minted');
 		require(msg.sender == _item.ownerOf(id), 'listing can be done only by owner');
 		require(_lis[addr][id].seller == address(0), 'item already listed');
+		require(price > 0, 'price must be higher than 0');
 
 		_lis[addr][id] = Listing(id, price, msg.sender);
 
@@ -50,7 +51,7 @@ contract ERC721Market is ERC721Holder, Market {
 
 	function buy(address addr, uint256 id) public {
 		require(itemAccepted(addr), 'item not accepted');
-		CustomItem _item = CustomItem(addr);
+		ERC721Item _item = ERC721Item(addr);
 
 		require(_lis[addr][id].seller != address(0), 'listing is not active');
 		require(msg.sender != _lis[addr][id].seller, 'seller cannot be buyer');
@@ -72,7 +73,7 @@ contract ERC721Market is ERC721Holder, Market {
 
 	function unlist(address addr, uint256 id) public {
 		require(itemAccepted(addr), 'item not accepted');
-		CustomItem _item = CustomItem(addr);
+		ERC721Item _item = ERC721Item(addr);
 
 		require(_lis[addr][id].seller != address(0), 'listing is not active');
 		require(msg.sender == _lis[addr][id].seller, 'only seller can cancel listing');

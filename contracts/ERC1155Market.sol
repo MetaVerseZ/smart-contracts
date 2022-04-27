@@ -35,9 +35,10 @@ contract ERC1155Market is ERC1155Holder, Market {
 		uint256 amount
 	) public {
 		require(itemAccepted(addr), 'item not accepted');
-		Item _item = Item(addr);
+		ERC1155Item _item = ERC1155Item(addr);
 
 		require(_item.balanceOf(msg.sender, id) >= amount, 'listing can be done only by owner');
+		require(price > 0, 'price must be higher than 0');
 
 		if (_lis[addr][id].sellers.length == 0) {
 			uint256[] memory amounts;
@@ -68,7 +69,7 @@ contract ERC1155Market is ERC1155Holder, Market {
 		uint256 amount
 	) public {
 		require(itemAccepted(addr), 'item not accepted');
-		Item _item = Item(addr);
+		ERC1155Item _item = ERC1155Item(addr);
 
 		require(!isSeller(addr, id, msg.sender), 'seller cannot be buyer');
 		require(_item.balanceOf(address(this), id) > 0, 'listing is not active');
@@ -135,7 +136,7 @@ contract ERC1155Market is ERC1155Holder, Market {
 
 	function unlist(address addr, uint256 id) public {
 		require(itemAccepted(addr), 'item not accepted');
-		Item _item = Item(addr);
+		ERC1155Item _item = ERC1155Item(addr);
 
 		require(isSeller(addr, id, msg.sender), 'only seller can cancel listing');
 		require(_item.balanceOf(address(this), id) > 0, 'listing is not active');
