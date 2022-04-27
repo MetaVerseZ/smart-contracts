@@ -8,7 +8,7 @@ const test = () => {
 	});
 
 	it('deploy item contract', async () => {
-		const Item = await ethers.getContractFactory('Item');
+		const Item = await ethers.getContractFactory('ERC1155Item');
 		const signers = await ethers.getSigners();
 		main = signers[0];
 		admin = signers[9];
