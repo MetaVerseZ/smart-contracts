@@ -4,7 +4,8 @@ pragma solidity ^0.8.9;
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 
 contract Land is ERC721 {
-	uint256 public _tokenId;
+	uint32 public _tokenId;
+	uint32 public _supply = 65536;
 
 	struct Coordinates {
 		address owner;
@@ -30,12 +31,12 @@ contract Land is ERC721 {
 	}
 
 	function mint(uint8 x, uint8 y) public {
+		require(_tokenId <= _supply, 'reached total supply');
 		require(isAdmin(msg.sender), 'only admin');
-		require(_market != address(0), 'market undefined');
 		require(!_items[x][y].minted, 'land already minted');
 
 		_safeMint(msg.sender, _tokenId);
-		setApprovalForAll(_market, true);
+		if (_market != address(0)) setApprovalForAll(_market, true);
 
 		_items[x][y] = Item(true, _tokenId);
 		_coordinates.push(Coordinates(msg.sender, x, y));
@@ -47,6 +48,8 @@ contract Land is ERC721 {
 
 	function burn(uint256 tokenId) public {
 		require(ERC721.ownerOf(tokenId) == msg.sender, 'only owner can burn');
+
+		_coordinates[tokenId].owner = address(0);
 		super._burn(tokenId);
 	}
 
@@ -87,5 +90,29 @@ contract Land is ERC721 {
 
 	function map() public view returns (Coordinates[] memory) {
 		return _coordinates;
+	}
+
+	function transferFrom(
+		address from,
+		address to,
+		uint256 tokenId
+	) public virtual override {
+		//solhint-disable-next-line max-line-length
+		require(_isApprovedOrOwner(_msgSender(), tokenId), 'ERC721: transfer caller is not owner nor approved');
+
+		_coordinates[tokenId].owner = to;
+		_transfer(from, to, tokenId);
+	}
+
+	function safeTransferFrom(
+		address from,
+		address to,
+		uint256 tokenId,
+		bytes memory _data
+	) public virtual override {
+		require(_isApprovedOrOwner(_msgSender(), tokenId), 'ERC721: transfer caller is not owner nor approved');
+
+		_coordinates[tokenId].owner = to;
+		_safeTransfer(from, to, tokenId, _data);
 	}
 }
