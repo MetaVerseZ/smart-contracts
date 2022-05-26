@@ -6,7 +6,8 @@ import '@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol';
 
 contract LandPresale is ERC721Holder {
 	Land _land;
-	address payable public _admin;
+	address public _admin;
+	address payable public _receiver;
 
 	uint256 public _price = 5 * 1e17;
 	bool _active = true;
@@ -16,8 +17,9 @@ contract LandPresale is ERC721Holder {
 	uint8 _maxX = 31;
 	uint8 _maxY = 31;
 
-	constructor(address land) {
-		_admin = payable(msg.sender);
+	constructor(address land, address receiver) {
+		_admin = msg.sender;
+		_receiver = payable(receiver);
 		_land = Land(land);
 	}
 
@@ -30,7 +32,7 @@ contract LandPresale is ERC721Holder {
 		uint32 id = _land._tokenId();
 		_land.mint(x, y);
 
-		(bool success1, ) = _admin.call{value: _price}('');
+		(bool success1, ) = _receiver.call{value: _price}('');
 		require(success1, 'transfer failed');
 
 		if (msg.value > _price) {
@@ -69,5 +71,15 @@ contract LandPresale is ERC721Holder {
 		_minY = minY;
 		_maxX = maxX;
 		_maxY = maxY;
+	}
+
+	function setReceiver(address receiver) public {
+		require(msg.sender == _admin, 'only admin');
+		_receiver = payable(receiver);
+	}
+
+	function setAdmin(address admin) public {
+		require(msg.sender == _admin, 'only admin');
+		_admin = admin;
 	}
 }

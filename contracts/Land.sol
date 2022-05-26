@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 
 contract Land is ERC721 {
 	uint32 public _tokenId;
-	uint32 public _supply = 65536;
+	uint32 public totalSupply = 65536;
 
 	struct Coordinates {
 		address owner;
@@ -31,7 +31,7 @@ contract Land is ERC721 {
 	}
 
 	function mint(uint8 x, uint8 y) public {
-		require(_tokenId <= _supply, 'reached total supply');
+		require(_tokenId <= totalSupply, 'reached total supply');
 		require(isAdmin(msg.sender), 'only admin');
 		require(!_items[x][y].minted, 'land already minted');
 
